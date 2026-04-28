@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-import { getDatabase, ref, get, push, set, update, remove } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+import { getDatabase, ref, get, push, set, update, remove, onValue } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
@@ -118,6 +118,7 @@ let allRequests = [];
 let allReviews = [];
 let allUsers = {};
 let allApplications = [];
+let allSupportChats = {};
 let currentUser = null;
 let currentProfileId = null;
 let currentCategory = 'All';
@@ -221,6 +222,9 @@ onAuthStateChanged(auth, (user) => {
         
         loginBtn.style.display = 'none';
         userProfile.style.display = 'flex';
+        const supportBtn = document.getElementById('supportBtn');
+        if(supportBtn) supportBtn.style.display = 'block';
+        if(typeof listenToUserSupportChats === 'function') listenToUserSupportChats();
         let profilePic = user.photoURL;
         if(allUsers[user.uid] && allUsers[user.uid].photoUrl) {
             profilePic = allUsers[user.uid].photoUrl;
@@ -247,6 +251,8 @@ onAuthStateChanged(auth, (user) => {
         
         loginBtn.style.display = 'block';
         userProfile.style.display = 'none';
+        const supportBtn = document.getElementById('supportBtn');
+        if(supportBtn) supportBtn.style.display = 'none';
     }
 });
 
@@ -1500,6 +1506,7 @@ if(document.getElementById('closeAdminPanelBtn')) {
 }
 
 function renderAdminList() {
+    if (typeof setupAdminSupportListener === 'function') setupAdminSupportListener();
     const totalUsers = Object.keys(allUsers || {}).length;
     const totalViews = editors.reduce((sum, ed) => sum + (ed.views || 0), 0);
     
@@ -2111,3 +2118,339 @@ if(submitJobReqBtn) {
         }
     });
 }
+
+// -------------------------------------------------------------
+// CUSTOMER SUPPORT CHAT SYSTEM
+// -------------------------------------------------------------
+const supportChatModal = document.getElementById('supportChatModal');
+const closeSupportChatBtn = document.getElementById('closeSupportChat');
+const supportBtn = document.getElementById('supportBtn');
+const supportChatContainer = document.getElementById('supportChatContainer');
+const supportChatInput = document.getElementById('supportChatInput');
+const sendSupportMsgBtn = document.getElementById('sendSupportMsgBtn');
+
+const adminSupportChatsModal = document.getElementById('adminSupportChatsModal');
+const closeAdminSupportChatsBtn = document.getElementById('closeAdminSupportChats');
+const adminSupportChatsBtn = document.getElementById('adminSupportChatsBtn');
+const adminSupportUserList = document.getElementById('adminSupportUserList');
+const adminSupportChatContainer = document.getElementById('adminSupportChatContainer');
+const adminSupportChatInput = document.getElementById('adminSupportChatInput');
+const sendAdminSupportMsgBtn = document.getElementById('sendAdminSupportMsgBtn');
+const adminSupportChatHeader = document.getElementById('adminSupportChatHeader');
+const adminSupportChatFooter = document.getElementById('adminSupportChatFooter');
+let adminActiveSupportUserId = null;
+let currentSupportListener = null;
+
+// User Side
+if (supportBtn) {
+    supportBtn.addEventListener('click', () => {
+        if (!currentUser) return;
+        supportChatModal.style.display = 'flex';
+        renderUserSupportChat();
+        if (allSupportChats[currentUser.uid] && allSupportChats[currentUser.uid].unreadUser > 0) {
+            update(ref(db, `support_chats/${currentUser.uid}`), { unreadUser: 0 });
+        }
+    });
+}
+
+function listenToUserSupportChats() {
+    if(!currentUser) return;
+    if(!currentSupportListener) {
+        currentSupportListener = onValue(ref(db, `support_chats/${currentUser.uid}`), (snap) => {
+            const data = snap.val() || {};
+            allSupportChats[currentUser.uid] = data;
+            
+            // Badge
+            const badge = document.getElementById('userUnreadSupportBadge');
+            if (badge) {
+                if (data.unreadUser > 0) {
+                    badge.style.display = 'flex';
+                    badge.textContent = data.unreadUser;
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+            
+            // UI
+            if (supportChatModal.style.display === 'flex') {
+                const msgsData = data.messages || {};
+                const messages = Object.keys(msgsData).map(k => ({ id: k, ...msgsData[k] })).sort((a,b) => a.timestamp - b.timestamp);
+                renderUserSupportChatUI(messages);
+                if (data.unreadUser > 0) {
+                    update(ref(db, `support_chats/${currentUser.uid}`), { unreadUser: 0 });
+                }
+            }
+        });
+    }
+}
+
+if (closeSupportChatBtn) {
+    closeSupportChatBtn.addEventListener('click', () => {
+        supportChatModal.style.display = 'none';
+    });
+}
+
+if (sendSupportMsgBtn && supportChatInput) {
+    const sendUserMessage = async () => {
+        const text = supportChatInput.value.trim();
+        if (!text || !currentUser) return;
+        supportChatInput.value = '';
+        
+        try {
+            const up = allUsers[currentUser.uid] || {};
+            await push(ref(db, `support_chats/${currentUser.uid}/messages`), {
+                senderId: currentUser.uid,
+                text: text,
+                timestamp: Date.now()
+            });
+            await update(ref(db, `support_chats/${currentUser.uid}`), {
+                lastMessage: text,
+                lastTimestamp: Date.now(),
+                unreadAdmin: (allSupportChats[currentUser.uid]?.unreadAdmin || 0) + 1,
+                userId: currentUser.uid,
+                userName: up.firstName ? (up.firstName + ' ' + (up.lastName || '')).trim() : 'Anonymous',
+                userPhoto: up.photoUrl || 'https://via.placeholder.com/40'
+            });
+        } catch(e) {
+            console.error("Failed to send message", e);
+        }
+    };
+    sendSupportMsgBtn.addEventListener('click', sendUserMessage);
+    supportChatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendUserMessage();
+    });
+}
+
+function renderUserSupportChatUI(messages) {
+    if (!supportChatContainer) return;
+    supportChatContainer.innerHTML = '';
+    
+    if (messages.length === 0) {
+        supportChatContainer.innerHTML = `<div class="text-center text-secondary" style="margin-top:20px;">Start a conversation with our support team.</div>`;
+        return;
+    }
+    
+    messages.forEach(msg => {
+        const isMe = msg.senderId === currentUser.uid;
+        const div = document.createElement('div');
+        div.style.maxWidth = '80%';
+        div.style.padding = '10px 15px';
+        div.style.borderRadius = '12px';
+        div.style.marginBottom = '5px';
+        div.style.wordBreak = 'break-word';
+        if (isMe) {
+            div.style.alignSelf = 'flex-end';
+            div.style.background = 'var(--primary)';
+            div.style.color = 'white';
+        } else {
+            div.style.alignSelf = 'flex-start';
+            div.style.background = 'rgba(255,255,255,0.1)';
+            div.style.color = 'white';
+        }
+        
+        div.innerHTML = `
+            <div style="font-size:0.95rem;">${msg.text}</div>
+            <div style="font-size:0.7rem; color:rgba(255,255,255,0.6); margin-top:5px; text-align: ${isMe ? 'right' : 'left'}">
+                ${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            </div>
+        `;
+        supportChatContainer.appendChild(div);
+    });
+    supportChatContainer.scrollTop = supportChatContainer.scrollHeight;
+}
+
+function renderUserSupportChat() {
+    // Initial fetch from state if needed
+    let msgs = [];
+    if (allSupportChats[currentUser.uid] && allSupportChats[currentUser.uid].messages) {
+        const d = allSupportChats[currentUser.uid].messages;
+        msgs = Object.keys(d).map(k => ({id: k, ...d[k]})).sort((a,b) => a.timestamp - b.timestamp);
+    }
+    renderUserSupportChatUI(msgs);
+}
+
+
+// Admin Side
+let globalAdminSupportListener = null;
+
+if (adminSupportChatsBtn) {
+    adminSupportChatsBtn.addEventListener('click', () => {
+        adminSupportChatsModal.style.display = 'flex';
+        renderAdminSupportUsersList();
+    });
+}
+
+if (closeAdminSupportChatsBtn) {
+    closeAdminSupportChatsBtn.addEventListener('click', () => {
+        adminSupportChatsModal.style.display = 'none';
+        adminActiveSupportUserId = null;
+        renderAdminActiveChat([]);
+        adminSupportChatHeader.style.display = 'none';
+        adminSupportChatFooter.style.display = 'none';
+    });
+}
+
+// Set up global listener inside onAuthStateChanged for admins
+function setupAdminSupportListener() {
+    if (!globalAdminSupportListener) {
+        globalAdminSupportListener = onValue(ref(db, 'support_chats'), (snap) => {
+            const data = snap.val() || {};
+            allSupportChats = data;
+            renderAdminSupportUsersList();
+            
+            // Update badge
+            let unreadCount = 0;
+            Object.values(data).forEach(ch => {
+                if (ch.unreadAdmin && ch.unreadAdmin > 0) unreadCount += ch.unreadAdmin;
+            });
+            const badge = document.getElementById('adminUnreadSupportBadge');
+            if (badge) {
+                if (unreadCount > 0) {
+                    badge.textContent = unreadCount;
+                    badge.style.display = 'flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+
+            // Refresh active chat if it's currently open
+            if (adminActiveSupportUserId && data[adminActiveSupportUserId]) {
+                const msgsData = data[adminActiveSupportUserId].messages || {};
+                const messages = Object.keys(msgsData).map(k => ({ id: k, ...msgsData[k] })).sort((a,b) => a.timestamp - b.timestamp);
+                renderAdminActiveChat(messages);
+            }
+        });
+    }
+}
+
+function renderAdminSupportUsersList() {
+    if (!adminSupportUserList) return;
+    adminSupportUserList.innerHTML = '';
+    
+    const chats = Object.keys(allSupportChats).map(k => ({ id: k, ...allSupportChats[k] }))
+        .sort((a, b) => (b.lastTimestamp || 0) - (a.lastTimestamp || 0));
+        
+    if (chats.length === 0) {
+        adminSupportUserList.innerHTML = `<div class="p-3 text-secondary text-center">No chats yet.</div>`;
+        return;
+    }
+    
+    chats.forEach(ch => {
+        const div = document.createElement('div');
+        const isActive = adminActiveSupportUserId === ch.id;
+        div.style.padding = '15px';
+        div.style.borderBottom = '1px solid var(--glass-border)';
+        div.style.cursor = 'pointer';
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.gap = '10px';
+        div.style.background = isActive ? 'rgba(255,255,255,0.05)' : 'transparent';
+        
+        div.onmouseover = () => { if(!isActive) div.style.background = 'rgba(255,255,255,0.02)'; };
+        div.onmouseout = () => { if(!isActive) div.style.background = 'transparent'; };
+        
+        const photo = ch.userPhoto || 'https://via.placeholder.com/40';
+        const name = ch.userName || 'Anonymous';
+        const unreadBadge = (ch.unreadAdmin > 0) ? `<span style="background:red; color:white; border-radius:50%; width:20px; height:20px; font-size:12px; display:flex; align-items:center; justify-content:center;">${ch.unreadAdmin}</span>` : '';
+        
+        div.innerHTML = `
+            <img src="${photo}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
+            <div style="flex:1; overflow:hidden;">
+                <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</div>
+                <div style="font-size:0.8rem; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    ${ch.lastMessage || '...'}
+                </div>
+            </div>
+            ${unreadBadge}
+        `;
+        
+        div.addEventListener('click', () => {
+            adminActiveSupportUserId = ch.id;
+            
+            // Mark as read
+            update(ref(db, `support_chats/${ch.id}`), { unreadAdmin: 0 });
+            
+            // Update Header
+            adminSupportChatHeader.style.display = 'flex';
+            document.getElementById('adminSupportChatAvatar').src = photo;
+            document.getElementById('adminSupportChatName').textContent = name;
+            adminSupportChatFooter.style.display = 'flex';
+            
+            // Initial render
+            const msgsData = ch.messages || {};
+            const messages = Object.keys(msgsData).map(k => ({ id: k, ...msgsData[k] })).sort((a,b) => a.timestamp - b.timestamp);
+            renderAdminActiveChat(messages);
+            
+            // Re-render list to show active state
+            renderAdminSupportUsersList();
+        });
+        
+        adminSupportUserList.appendChild(div);
+    });
+}
+
+function renderAdminActiveChat(messages) {
+    if (!adminSupportChatContainer) return;
+    adminSupportChatContainer.innerHTML = '';
+    
+    if (messages.length === 0) {
+        adminSupportChatContainer.innerHTML = `<div class="text-center text-secondary" style="margin-top: 20px;">No messages yet.</div>`;
+        return;
+    }
+    
+    messages.forEach(msg => {
+        const isAdmin = msg.senderId === 'admin';
+        const div = document.createElement('div');
+        div.style.maxWidth = '70%';
+        div.style.padding = '10px 15px';
+        div.style.borderRadius = '12px';
+        div.style.marginBottom = '5px';
+        div.style.wordBreak = 'break-word';
+        if (isAdmin) {
+            div.style.alignSelf = 'flex-end';
+            div.style.background = 'var(--primary)';
+            div.style.color = 'white';
+        } else {
+            div.style.alignSelf = 'flex-start';
+            div.style.background = 'rgba(255,255,255,0.1)';
+            div.style.color = 'white';
+        }
+        
+        div.innerHTML = `
+            <div style="font-size:0.95rem;">${msg.text}</div>
+            <div style="font-size:0.7rem; color:rgba(255,255,255,0.6); margin-top:5px; text-align: ${isAdmin ? 'right' : 'left'}">
+                ${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            </div>
+        `;
+        adminSupportChatContainer.appendChild(div);
+    });
+    adminSupportChatContainer.scrollTop = adminSupportChatContainer.scrollHeight;
+}
+
+if (sendAdminSupportMsgBtn && adminSupportChatInput) {
+    const sendAdminMessage = async () => {
+        const text = adminSupportChatInput.value.trim();
+        if (!text || !adminActiveSupportUserId) return;
+        adminSupportChatInput.value = '';
+        
+        try {
+            await push(ref(db, `support_chats/${adminActiveSupportUserId}/messages`), {
+                senderId: 'admin',
+                text: text,
+                timestamp: Date.now()
+            });
+            await update(ref(db, `support_chats/${adminActiveSupportUserId}`), {
+                lastMessage: text,
+                lastTimestamp: Date.now(),
+                unreadUser: (allSupportChats[adminActiveSupportUserId]?.unreadUser || 0) + 1
+            });
+        } catch(e) {
+            console.error("Failed to send admin message", e);
+        }
+    };
+    sendAdminSupportMsgBtn.addEventListener('click', sendAdminMessage);
+    adminSupportChatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendAdminMessage();
+    });
+}
+
