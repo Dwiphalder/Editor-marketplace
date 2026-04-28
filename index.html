@@ -131,35 +131,42 @@
             <h1 class="gradient-text tracking-tight mb-2 uppercase" style="font-family: 'Outfit', sans-serif; font-size: clamp(2rem, 5vw, 4rem); font-weight: 800; line-height: 1.1; letter-spacing: -1px;">FIND YOUR PERFECT EDITOR</h1>
             <p class="text-secondary lg-text mb-6 uppercase" style="font-size: 1.1rem; max-width: 600px; margin: 0 auto; font-weight: 500;">HIRE TOP TALENT FOR YOUR VIDEO, PHOTO, AND AUDIO PROJECTS.</p>
 
-            <div class="search-bar-large" style="margin: 0 auto 1.5rem; max-width: 100%; box-shadow: none;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input type="text" id="searchInput" placeholder="Search editors by name or skill...">
+            <div style="display: flex; gap: 10px; margin: 0 auto 1.5rem; max-width: 100%; align-items: center; justify-content: center;">
+                <div class="search-bar-large" style="margin: 0; box-shadow: none; flex: 1;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="searchInput" placeholder="Search editors by name or skill...">
+                </div>
+                <button id="toggleFiltersBtn" class="icon-btn" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; height: 50px; width: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                </button>
             </div>
 
-            <div class="filters-scroll" id="categoryFilters">
-                <button class="filter-chip active" data-cat="All">All Categories</button>
-                <button class="filter-chip" data-cat="Video">Video Editing</button>
-                <button class="filter-chip" data-cat="Photo">Photo Retouching</button>
-                <button class="filter-chip" data-cat="Motion">Motion Graphics</button>
-                <button class="filter-chip" data-cat="Audio">Audio Post-Production</button>
-            </div>
-            
-            <div class="advanced-filters mt-4 pt-4" style="border-top: 1px solid var(--glass-border);">
-                <select id="filterBudget">
-                    <option value="All">💰 Budget Range </option>
-                    <option value="Under50">Under ₹50</option>
-                    <option value="50To100">₹50 - ₹100</option>
-                    <option value="Over100">Over ₹100</option>
-                </select>
-                <select id="filterTool">
-                    <option value="All">🎛 Advanced Filters (Tools, Level)</option>
-                    <option value="Premiere Pro">Premiere Pro</option>
-                    <option value="CapCut">CapCut</option>
-                    <option value="DaVinci Resolve">DaVinci Resolve</option>
-                    <option value="After Effects">After Effects</option>
-                    <option value="Final Cut Pro">Final Cut Pro</option>
-                    <option value="Photoshop">Photoshop</option>
-                </select>
+            <div id="filterContainer" style="display: none;">
+                <div class="filters-scroll" id="categoryFilters">
+                    <button class="filter-chip active" data-cat="All">All Categories</button>
+                    <button class="filter-chip" data-cat="Video">Video Editing</button>
+                    <button class="filter-chip" data-cat="Photo">Photo Retouching</button>
+                    <button class="filter-chip" data-cat="Motion">Motion Graphics</button>
+                    <button class="filter-chip" data-cat="Audio">Audio Post-Production</button>
+                </div>
+                
+                <div class="advanced-filters mt-4 pt-4" style="border-top: 1px solid var(--glass-border);">
+                    <select id="filterBudget">
+                        <option value="All">💰 Budget Range </option>
+                        <option value="Under50">Under ₹50</option>
+                        <option value="50To100">₹50 - ₹100</option>
+                        <option value="Over100">Over ₹100</option>
+                    </select>
+                    <select id="filterTool">
+                        <option value="All">🎛 Advanced Filters (Tools, Level)</option>
+                        <option value="Premiere Pro">Premiere Pro</option>
+                        <option value="CapCut">CapCut</option>
+                        <option value="DaVinci Resolve">DaVinci Resolve</option>
+                        <option value="After Effects">After Effects</option>
+                        <option value="Final Cut Pro">Final Cut Pro</option>
+                        <option value="Photoshop">Photoshop</option>
+                    </select>
+                </div>
             </div>
         </section>
 
@@ -206,6 +213,10 @@
                                 <option value="Audio">Audio Design</option>
                                 <option value="VFX">VFX & 3D</option>
                             </select>
+                        </div>
+                        <div class="form-group" id="jobStyleGroup">
+                            <label>Editor Specialty / Focus (e.g. YouTube, Short Reels, Wedding)</label>
+                            <input type="text" id="jobStyle" placeholder="e.g. YouTube, Short Reels, Wedding, Corporate">
                         </div>
                         <div class="form-group">
                             <label>Starting Price (₹)</label>
@@ -417,6 +428,13 @@
                 <h3>My Requests</h3>
                 <div id="userRequestsList" class="mt-3">
                     <p class="text-secondary text-sm">Loading requests...</p>
+                </div>
+                
+                <hr style="margin:20px 0; border:1px solid var(--glass-border);">
+                
+                <h3>My Applications (Jobs)</h3>
+                <div id="userApplicationsList" class="mt-3">
+                    <p class="text-secondary text-sm">Loading applications...</p>
                 </div>
             </div>
         </div>
@@ -634,6 +652,10 @@
                             <option value="Audio">Audio Design</option>
                             <option value="VFX">VFX & 3D</option>
                         </select>
+                    </div>
+                    <div class="form-group" id="edStyleGroup">
+                        <label>Specialty / Focus</label>
+                        <input type="text" id="edStyle" placeholder="e.g. YouTube, Short Reels, Wedding">
                     </div>
                     <div class="form-group">
                         <label>Starting Price (₹)</label>

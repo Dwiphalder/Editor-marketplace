@@ -153,6 +153,18 @@ const mainGrid = document.getElementById('mainGrid');
 const loadingMain = document.getElementById('loadingMain');
 const emptyMain = document.getElementById('emptyMain');
 const filterChips = document.querySelectorAll('.filter-chip');
+const toggleFiltersBtn = document.getElementById('toggleFiltersBtn');
+const filterContainer = document.getElementById('filterContainer');
+
+if (toggleFiltersBtn && filterContainer) {
+    toggleFiltersBtn.addEventListener('click', () => {
+        if (filterContainer.style.display === 'none') {
+            filterContainer.style.display = 'block';
+        } else {
+            filterContainer.style.display = 'none';
+        }
+    });
+}
 
 // DOM Elements - Modals
 const profileModal = document.getElementById('editorProfileModal');
@@ -460,8 +472,7 @@ function generateCardHTML(editor, index = 0) {
     // Convert video clips string to array
     const clips = editor.video_clips ? editor.video_clips.split(',').slice(0, 2) : [];
     
-    // Removing dummy thumbnails
-    const clipsPreviewHTML = '';
+    let clipsPreviewHTML = '';
 
     return `
         <div class="editor-card new-style animate-fade" data-id="${editor.id}" style="animation-delay: ${index * 0.1}s">
@@ -469,7 +480,7 @@ function generateCardHTML(editor, index = 0) {
             <div class="card-overlay"></div>
             <div class="card-content">
                 <h3 class="name font-title">${editor.name} ${verifiedIcon}</h3>
-                <p class="title">${editor.bio ? editor.bio.substring(0, 30) + '...' : editor.category + ' Editor'}</p>
+                <p class="title">${editor.category} Editor</p>
                 <p class="reviews">${ratingText}</p>
                 ${clipsPreviewHTML}
                 <div class="card-actions">
@@ -482,17 +493,11 @@ function generateCardHTML(editor, index = 0) {
 }
 
 function renderTrending() {
-    // Trending score = views + (projects * 5)
-    let trendingPool = editors.map(ed => ({
-        ...ed, 
-        trendScore: (ed.views || 0) + ((ed.projects || 0) * 5)
-    })).sort((a,b) => b.trendScore - a.trendScore);
-    
-    trendingPool = trendingPool.filter(ed => ed.trendScore > 0);
-    
+    let trendingPool = editors.filter(ed => ed.isFeatured === true);
+
     if (trendingPool.length > 0) {
         trendingSection.style.display = 'block';
-        trendingGrid.innerHTML = trendingPool.slice(0, 4).map((ed, i) => generateCardHTML(ed, i)).join('');
+        trendingGrid.innerHTML = trendingPool.map((ed, i) => generateCardHTML(ed, i)).join('');
         
         // Auto scroll setup
         if (window.trendingInterval) clearInterval(window.trendingInterval);
@@ -839,7 +844,89 @@ window.openUserProfileModal = function(showMustComplete = false) {
     }
     
     renderUserRequestsList();
+    renderUserApplicationsList();
     userProfileModal.style.display = 'flex';
+};
+
+function renderUserApplicationsList() {
+    const list = document.getElementById('userApplicationsList');
+    if (!list || !currentUser) return;
+    const apps = allApplications.filter(a => a.userId === currentUser.uid);
+    if(apps.length === 0) {
+        list.innerHTML = '<p class="text-secondary text-sm">No job applications submitted yet.</p>';
+        return;
+    }
+    
+    list.innerHTML = apps.map(app => {
+        let statusColor = app.status === 'pending' ? 'var(--warning)' : (app.status === 'approved' ? 'var(--success)' : 'var(--danger)');
+        
+        return `<div class="p-3 mb-3" style="background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid var(--glass-border);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                <div>
+                    <h4 style="margin:0; font-size:1.1rem;">${app.category} Editor ${app.style ? ' - ' + app.style : ''}</h4>
+                    <p class="text-xs text-secondary mb-1">Submitted: ${new Date(app.timestamp).toLocaleDateString()}</p>
+                </div>
+                <span class="text-sm font-bold" style="color:${statusColor}; text-transform:uppercase;">${app.status || 'Pending'}</span>
+            </div>
+            <p class="text-sm mb-2" style="color:#d1d5db;">Price: ₹${app.price} | Exp: ${app.experience}</p>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn secondary btn-sm" onclick="window.editUserJobApp('${app.id}')">Update</button>
+                <button class="btn danger btn-sm" onclick="window.deleteUserJobApp('${app.id}')">Remove</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+window.deleteUserJobApp = async (appId) => {
+    if(!confirm("Are you sure you want to remove your application?")) return;
+    try {
+        await remove(ref(db, "editor_applications/" + appId));
+        allApplications = allApplications.filter(a => a.id !== appId);
+        renderUserApplicationsList();
+    } catch(e) {
+        console.error(e);
+        alert('Failed to remove application.');
+    }
+};
+
+window.editUserJobApp = (appId) => {
+    const app = allApplications.find(a => a.id === appId);
+    if(!app) return;
+    
+    // Switch to jobs view
+    userProfileModal.style.display = 'none';
+    switchNavView('jobs');
+    
+    // Fill the jobs form with the data
+    document.getElementById('jobCategory').value = app.category;
+    if(document.getElementById('jobStyle')) document.getElementById('jobStyle').value = app.style || '';
+    document.getElementById('jobPrice').value = app.price;
+    document.getElementById('jobExperience').value = app.experience;
+    document.getElementById('jobSkills').value = app.skills;
+    document.getElementById('jobTools').value = app.tools;
+    document.getElementById('jobBio').value = app.bio;
+    document.getElementById('jobPortfolio').value = app.portfolio || '';
+    document.getElementById('jobVideoClips').value = app.videoLinks ? (Array.isArray(app.videoLinks) ? app.videoLinks.join(', ') : app.videoLinks) : '';
+    
+    document.getElementById('jobAvatarUrl').value = app.photo_url || '';
+    document.getElementById('jobBannerUrl').value = app.banner_url || '';
+    
+    const avatarPrev = document.getElementById('jobAvatarPreview');
+    const bannerPrev = document.getElementById('jobBannerPreview');
+    
+    if(app.photo_url) {
+        avatarPrev.src = app.photo_url;
+        avatarPrev.style.display = 'block';
+    }
+    if(app.banner_url) {
+        bannerPrev.src = app.banner_url;
+        bannerPrev.style.display = 'block';
+    }
+    
+    // Mark as updating
+    const submitBtn = document.getElementById('submitJobReqBtn');
+    submitBtn.textContent = 'Update Application';
+    submitBtn.dataset.updateId = appId;
 };
 
 function renderUserRequestsList() {
@@ -1216,6 +1303,7 @@ function renderAdminList() {
                     <td>₹${app.price}</td>
                     <td>${new Date(app.timestamp).toLocaleDateString()}</td>
                     <td style="display: flex; gap: 5px;">
+                        <button class="btn btn-sm" style="background:#3b82f6;color:white;" onclick="window.viewEditJobApp('${app.id}')">View/Edit</button>
                         <button class="btn success btn-sm" onclick="window.approveJobApp('${app.id}')">Approve</button>
                         <button class="btn danger btn-sm" onclick="window.rejectJobApp('${app.id}')">Reject</button>
                     </td>
@@ -1236,10 +1324,12 @@ window.approveJobApp = async (appId) => {
     try {
         const editorRef = push(ref(db, "editors"));
         const newEditorData = {
+            userId: app.userId || '',
             name: app.name,
             email: app.email,
             phone: app.phone,
             category: app.category,
+            style: app.style || '',
             price: app.price,
             experience: app.experience,
             skills: app.skills,
@@ -1300,6 +1390,7 @@ if(document.getElementById('addNewEditorBtn')) document.getElementById('addNewEd
 function clearEditorForm() {
     document.getElementById('edName').value = '';
     document.getElementById('edCategory').value = 'Video';
+    if (document.getElementById('edStyle')) document.getElementById('edStyle').value = '';
     document.getElementById('edPrice').value = '';
     document.getElementById('edExperience').value = '';
     document.getElementById('edSkills').value = '';
@@ -1323,6 +1414,45 @@ function clearEditorForm() {
 if(document.getElementById('closeEditorForm')) document.getElementById('closeEditorForm').addEventListener('click', () => { editorFormModal.style.display = 'none'; });
 if(document.getElementById('closeEditorFormBtn')) document.getElementById('closeEditorFormBtn').addEventListener('click', () => { editorFormModal.style.display = 'none'; });
 
+window.viewEditJobApp = (appId) => {
+    const app = allApplications.find(a => a.id === appId);
+    if (!app) return;
+    document.getElementById('editorFormTitle').textContent = 'Review Application';
+    document.getElementById('editEditorId').value = 'APP_' + appId;
+    document.getElementById('edName').value = app.name || '';
+    document.getElementById('edCategory').value = app.category || 'Video';
+    if(document.getElementById('edStyle')) document.getElementById('edStyle').value = app.style || '';
+    document.getElementById('edPrice').value = app.price || 50;
+    document.getElementById('edExperience').value = app.experience || '1-3 years';
+    document.getElementById('edSkills').value = app.skills || '';
+    document.getElementById('edTools').value = app.tools || '';
+    document.getElementById('edBio').value = app.bio || '';
+    document.getElementById('edPortfolio').value = app.portfolio || '';
+    // video clips in app are saved as videoLinks[] array, sometimes comma joined
+    if(document.getElementById('edVideoClips')) document.getElementById('edVideoClips').value = app.videoLinks ? (Array.isArray(app.videoLinks) ? app.videoLinks.join(', ') : app.videoLinks) : '';
+    
+    document.getElementById('edAvatarUrl').value = app.photo_url || '';
+    document.getElementById('edBannerUrl').value = app.banner_url || '';
+    
+    if(app.photo_url) {
+        document.getElementById('edAvatarPreview').src = app.photo_url;
+        document.getElementById('edAvatarPreview').style.display = 'block';
+    } else {
+        document.getElementById('edAvatarPreview').style.display = 'none';
+    }
+    if(app.banner_url) {
+        document.getElementById('edBannerPreview').src = app.banner_url;
+        document.getElementById('edBannerPreview').style.display = 'block';
+    } else {
+        document.getElementById('edBannerPreview').style.display = 'none';
+    }
+    
+    document.getElementById('edIsFeatured').checked = false;
+    document.getElementById('edIsVerified').checked = true; // Apps usually become verified automatically
+    
+    editorFormModal.style.display = 'flex';
+};
+
 // Edit Exposing Globally for inline onclick
 window.editAdminEditor = (id) => {
     const ed = editors.find(e => e.id === id);
@@ -1333,6 +1463,7 @@ window.editAdminEditor = (id) => {
     
     document.getElementById('edName').value = ed.name || '';
     document.getElementById('edCategory').value = ed.category || 'Video';
+    if(document.getElementById('edStyle')) document.getElementById('edStyle').value = ed.style || '';
     document.getElementById('edPrice').value = ed.price || '';
     document.getElementById('edExperience').value = ed.experience || '';
     document.getElementById('edSkills').value = ed.skills || '';
@@ -1381,12 +1512,13 @@ if(document.getElementById('saveEditorBtn')) document.getElementById('saveEditor
     const payload = {
         name: document.getElementById('edName').value,
         category: document.getElementById('edCategory').value,
+        style: document.getElementById('edStyle') ? document.getElementById('edStyle').value : '',
         price: Number(document.getElementById('edPrice').value),
         experience: document.getElementById('edExperience').value,
         skills: document.getElementById('edSkills').value,
         tools: document.getElementById('edTools') ? document.getElementById('edTools').value : '',
         bio: document.getElementById('edBio').value,
-        video_clips: document.getElementById('edVideoClips') ? document.getElementById('edVideoClips').value : '',
+        video_clips: document.getElementById('edVideoLinks') ? document.getElementById('edVideoLinks').value : (document.getElementById('edVideoClips') ? document.getElementById('edVideoClips').value : ''),
         photo_url: document.getElementById('edAvatarUrl').value,
         banner_url: document.getElementById('edBannerUrl').value,
         availability: document.getElementById('edAvailability').value,
@@ -1408,8 +1540,25 @@ if(document.getElementById('saveEditorBtn')) document.getElementById('saveEditor
     
     try {
         if(id) {
-            // Update
-            await update(ref(db, "editors/" + id), payload);
+            if (id.startsWith('APP_')) {
+                // Editing an existing job application to approve it
+                const appId = id.replace('APP_', '');
+                const app = allApplications.find(a => a.id === appId);
+                if(app) {
+                    payload.userId = app.userId || '';
+                    payload.views = 0;
+                    payload.rating = "5.0";
+                    payload.createdAt = Date.now();
+                    const editorRef = push(ref(db, "editors"));
+                    await set(editorRef, payload);
+                    await set(ref(db, "editor_applications/" + appId + "/status"), 'approved');
+                    allApplications.find(a => a.id === appId).status = 'approved';
+                    renderAdminList(); // Refresh admin list
+                }
+            } else {
+                // Normal Update
+                await update(ref(db, "editors/" + id), payload);
+            }
         } else {
             // Create
             payload.views = 0;
@@ -1549,6 +1698,7 @@ if(submitJobReqBtn) {
         if(!up) return;
 
         const category = document.getElementById('jobCategory').value;
+        const style = document.getElementById('jobStyle') ? document.getElementById('jobStyle').value : '';
         const price = document.getElementById('jobPrice').value;
         const experience = document.getElementById('jobExperience').value;
         const skills = document.getElementById('jobSkills').value;
@@ -1579,6 +1729,7 @@ if(submitJobReqBtn) {
             email: currentUser.email,
             phone: up.phone,
             category,
+            style,
             price: Number(price),
             experience,
             skills,
@@ -1593,9 +1744,23 @@ if(submitJobReqBtn) {
         };
 
         try {
-            const reqRef = push(ref(db, "editor_applications"));
-            await set(reqRef, reqPayload);
-            alert('Application submitted successfully! Our team will review your profile.');
+            const updateId = submitJobReqBtn.dataset.updateId;
+            if (updateId) {
+                // Updating existing app
+                await update(ref(db, "editor_applications/" + updateId), {
+                    ...reqPayload,
+                    status: 'pending', // Resets to pending upon update
+                    timestamp: Date.now()
+                });
+                alert('Application updated successfully! Resubmitted for review.');
+                delete submitJobReqBtn.dataset.updateId;
+                submitJobReqBtn.textContent = 'Submit Application';
+            } else {
+                const reqRef = push(ref(db, "editor_applications"));
+                await set(reqRef, reqPayload);
+                alert('Application submitted successfully! Our team will review your profile.');
+            }
+            
             // Reset form
             document.getElementById('jobPrice').value = '';
             document.getElementById('jobExperience').value = '';
