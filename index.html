@@ -108,9 +108,9 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
             <span>Home</span>
         </a>
-        <a href="#" class="nav-item">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <span>Explore</span>
+        <a href="#" class="nav-item" id="bottomNavWishlist">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            <span>Wishlist</span>
         </a>
         <a href="#" class="nav-item" id="bottomNavJobs">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
@@ -189,6 +189,14 @@
                 No editors found matching your criteria.
             </div>
         </section>
+        </div>
+
+        <div id="wishlistView" style="display: none;" class="mt-4 pb-10">
+            <section class="filter-section mx-auto text-center mb-6" style="max-width: 800px; background: rgba(219, 39, 119, 0.05); padding: 2rem; border-radius: 24px; border: 1px solid rgba(219, 39, 119, 0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                <h1 class="gradient-text tracking-tight mb-2 uppercase" style="font-family: 'Outfit', sans-serif; font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; line-height: 1.1; letter-spacing: -1px; background: linear-gradient(90deg, #db2777 0%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">YOUR WISHLIST</h1>
+                <p class="text-secondary lg-text uppercase" style="font-size: 1rem; max-width: 600px; margin: 0 auto; font-weight: 500;">Saved profiles you loved.</p>
+            </section>
+            <div id="wishlistGrid" class="editors-grid"></div>
         </div>
 
         <div id="jobsView" style="display: none;" class="mt-4 pb-10">
@@ -298,8 +306,11 @@
     <!-- Editor Profile Modal -->
     <div class="modal-overlay" id="editorProfileModal" style="display: none;">
         <div class="modal-card large-modal">
-            <div class="modal-header border-0 pb-0" style="padding-bottom: 0; position: absolute; z-index: 100; right: 0;">
-                <span class="close" id="closeProfileModal" style="z-index: 10; color: white; background: rgba(0,0,0,0.5); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; margin: 10px;">&times;</span>
+            <div class="modal-header border-0 pb-0" style="padding-bottom: 0; position: absolute; z-index: 100; right: 0; display:flex; gap:10px; padding: 10px;">
+                <button id="toggleWishlistBtn" style="background: rgba(0,0,0,0.5); border: none; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s;">
+                    <svg id="wishlistHeartIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                </button>
+                <span class="close" id="closeProfileModal" style="z-index: 10; color: white; background: rgba(0,0,0,0.5); border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;">&times;</span>
             </div>
             <div class="modal-body p-0">
                 <div class="profile-banner-container" style="width: 100%; height: 200px; overflow: hidden; position: relative;">
@@ -586,7 +597,15 @@
             </div>
             
             <div class="admin-dashboard container" style="max-width:1200px; margin:0 auto; padding:2rem;">
-                <div class="stats-grid mb-4">
+                <div class="stats-grid mb-4" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
+                    <div class="stat-card glass-card" style="background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;">
+                        <h3>Total Users</h3>
+                        <p id="statTotalUsers" class="stat-number">0</p>
+                    </div>
+                    <div class="stat-card glass-card" style="background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;">
+                        <h3>Profile Views</h3>
+                        <p id="statTotalViews" class="stat-number">0</p>
+                    </div>
                     <div class="stat-card glass-card" style="background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;">
                         <h3>Total Editors</h3>
                         <p id="statTotal" class="stat-number">0</p>
@@ -594,10 +613,6 @@
                     <div class="stat-card glass-card" style="background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;">
                         <h3>Featured</h3>
                         <p id="statFeatured" class="stat-number">0</p>
-                    </div>
-                    <div class="stat-card glass-card" style="background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;">
-                        <h3>Verified</h3>
-                        <p id="statVerified" class="stat-number">0</p>
                     </div>
                 </div>
 
@@ -642,6 +657,25 @@
                             <tr>
                                 <td colspan="6" class="text-center text-secondary text-sm">No new applications.</td>
                             </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="admin-header-actions mb-3 mt-5" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2>Registered Users</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Photo</th>
+                                <th>Name</th>
+                                <th>Email/UID</th>
+                                <th>Phone</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminUsersList">
                         </tbody>
                     </table>
                 </div>
@@ -789,6 +823,24 @@
                     <button class="btn secondary" id="closeEditorFormBtn">Cancel</button>
                     <button class="btn primary" id="saveEditorBtn">Save Editor</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin User Profile Modal -->
+    <div class="modal-overlay" id="adminUserProfileModal" style="display: none; z-index: 2000;">
+        <div class="modal-card small-modal">
+            <div class="modal-header">
+                <h3>User Profile</h3>
+                <span class="close" id="closeAdminUserProfile">&times;</span>
+            </div>
+            <div class="modal-body text-center">
+                <img id="adminUpAvatar" src="" style="width:100px; height:100px; border-radius:50%; object-fit:cover; margin-bottom:15px; border:3px solid var(--primary);">
+                <h2 id="adminUpName" style="margin:0 0 5px;"></h2>
+                <p id="adminUpEmail" class="text-secondary" style="margin:0 0 5px;"></p>
+                <p id="adminUpPhone" class="text-secondary" style="margin:0 0 15px;"></p>
+                <p class="text-xs text-secondary mb-2" id="adminUpId" style="word-break: break-all;"></p>
+                <button class="btn primary w-100 mt-2" onclick="document.getElementById('adminUserProfileModal').style.display='none'">Close</button>
             </div>
         </div>
     </div>

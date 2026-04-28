@@ -138,8 +138,11 @@ const closeUserProfile = document.getElementById('closeUserProfile');
 const bottomNavProfile = document.getElementById('bottomNavProfile');
 const bottomNavHome = document.getElementById('bottomNavHome');
 const bottomNavJobs = document.getElementById('bottomNavJobs');
+const bottomNavWishlist = document.getElementById('bottomNavWishlist');
 const homeView = document.getElementById('homeView');
 const jobsView = document.getElementById('jobsView');
+const wishlistView = document.getElementById('wishlistView');
+const wishlistGrid = document.getElementById('wishlistGrid');
 const saveUserProfileBtn = document.getElementById('saveUserProfileBtn');
 const upAvatarPreview = document.getElementById('upAvatarPreview');
 const upAvatarUpload = document.getElementById('upAvatarUpload');
@@ -352,18 +355,30 @@ window.switchNavView = function(view) {
     if(view === 'home') {
         if(homeView) homeView.style.display = 'block';
         if(jobsView) jobsView.style.display = 'none';
+        if(wishlistView) wishlistView.style.display = 'none';
         if(bottomNavHome) bottomNavHome.classList.add('active');
         if(bottomNavJobs) bottomNavJobs.classList.remove('active');
+        if(bottomNavWishlist) bottomNavWishlist.classList.remove('active');
     } else if(view === 'jobs') {
         if(homeView) homeView.style.display = 'none';
         if(jobsView) jobsView.style.display = 'block';
+        if(wishlistView) wishlistView.style.display = 'none';
         if(bottomNavJobs) bottomNavJobs.classList.add('active');
         if(bottomNavHome) bottomNavHome.classList.remove('active');
+        if(bottomNavWishlist) bottomNavWishlist.classList.remove('active');
         populateJobFormFromProfile();
+    } else if(view === 'wishlist') {
+        if(homeView) homeView.style.display = 'none';
+        if(jobsView) jobsView.style.display = 'none';
+        if(wishlistView) wishlistView.style.display = 'block';
+        if(bottomNavWishlist) bottomNavWishlist.classList.add('active');
+        if(bottomNavHome) bottomNavHome.classList.remove('active');
+        if(bottomNavJobs) bottomNavJobs.classList.remove('active');
+        renderWishlist();
     }
 };
 
-if(bottomNavHome && bottomNavJobs && homeView && jobsView) {
+if(bottomNavHome && bottomNavJobs && bottomNavWishlist) {
     bottomNavHome.addEventListener('click', (e) => {
         e.preventDefault();
         window.switchNavView('home');
@@ -371,6 +386,10 @@ if(bottomNavHome && bottomNavJobs && homeView && jobsView) {
     bottomNavJobs.addEventListener('click', (e) => {
         e.preventDefault();
         window.switchNavView('jobs');
+    });
+    bottomNavWishlist.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.switchNavView('wishlist');
     });
 }
 
@@ -450,6 +469,7 @@ async function fetchEditors() {
         
         renderTrending();
         filterAndRenderEditors();
+        renderWishlist();
         renderAdminList(); // Refresh admin list if it's open
     } catch (error) {
         console.error("Fetch error:", error);
@@ -468,6 +488,13 @@ function generateCardHTML(editor, index = 0) {
     } else if (editor.verificationType === 'blue' || editor.isVerified) {
         verifiedIcon = `<span class="verified-badge blink-badge" title="Verified" style="position: absolute; top: 12px; right: 12px; z-index: 10; background: var(--bg-card); border-radius: 50%; display: flex; box-shadow: 0 2px 10px rgba(0,0,0,0.5);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32"><path fill="#1d9bf0" d="M22.5 12.5l-1.58 1.58.21 2.24-2.24.21-1.27 1.86-2.16-.92-1.66 1.48L12 17.5l-1.8 1.45-1.66-1.48-2.16.92-1.27-1.86-2.24-.21.21-2.24L1.5 12.5l1.58-1.58-.21-2.24 2.24-.21 1.27-1.86 2.16.92 1.66-1.48L12 6.5l1.8-1.45 1.66 1.48 2.16-.92 1.27 1.86 2.24.21-.21 2.24 1.58 1.58z" /><path fill="#fff" d="M10.5 16l-3.5-3.5 1.4-1.4 2.1 2.1 5.6-5.6 1.4 1.4-7 7z" /></svg></span>`;
         cardBorderStyle = 'border: 2px solid #10B981; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);';
+    }
+
+    if (currentUser) {
+        const up = allUsers[currentUser.uid] || {};
+        if (up.wishlist && up.wishlist[editor.id]) {
+            cardBorderStyle = 'border: 2px solid #ec4899; box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);';
+        }
     }
     
     // Calculate real rating
@@ -509,6 +536,23 @@ function generateCardHTML(editor, index = 0) {
             </div>
         </div>
     `;
+}
+
+function renderWishlist() {
+    if (!currentUser) {
+        wishlistGrid.innerHTML = '<div class="text-center p-4"><p>Please sign in to view your wishlist.</p></div>';
+        return;
+    }
+    const up = allUsers[currentUser.uid] || {};
+    const wishlistObj = up.wishlist || {};
+    
+    const wishlistedEditors = editors.filter(ed => wishlistObj[ed.id] && !ed.deletionScheduledAt);
+    
+    if (wishlistedEditors.length > 0) {
+        wishlistGrid.innerHTML = wishlistedEditors.map((ed, i) => generateCardHTML(ed, i)).join('');
+    } else {
+        wishlistGrid.innerHTML = '<div class="text-center p-4"><p>Your wishlist is empty.</p></div>';
+    }
 }
 
 function renderTrending() {
@@ -703,6 +747,16 @@ function openEditorProfile(id) {
     document.getElementById('epName').textContent = ed.name;
     document.getElementById('epCategory').textContent = ed.category;
     
+    // Update wishlist icon
+    const wishlistIcon = document.getElementById('wishlistHeartIcon');
+    if (currentUser && allUsers[currentUser.uid]?.wishlist?.[id]) {
+        wishlistIcon.setAttribute('fill', '#ec4899');
+        wishlistIcon.setAttribute('stroke', '#ec4899');
+    } else {
+        wishlistIcon.setAttribute('fill', 'none');
+        wishlistIcon.setAttribute('stroke', 'white');
+    }
+    
     // Rating & Reviews
     const editorReviews = allReviews.filter(r => r.editorId === ed.id);
     let avgRating = 0;
@@ -815,6 +869,59 @@ function openEditorProfile(id) {
 document.getElementById('closeProfileModal').addEventListener('click', () => { profileModal.style.display = 'none'; });
 if(document.getElementById('closeProfileBtn')) document.getElementById('closeProfileBtn').addEventListener('click', () => { profileModal.style.display = 'none'; });
 if(document.getElementById('closeProfileBtnMobile')) document.getElementById('closeProfileBtnMobile').addEventListener('click', () => { profileModal.style.display = 'none'; });
+
+const wishlistSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); // short pop sound
+
+document.getElementById('toggleWishlistBtn').addEventListener('click', async () => {
+    if (!currentUser) {
+        loginPromptModal.style.display = 'flex';
+        return;
+    }
+    if (!currentProfileId) return;
+
+    try {
+        const btn = document.getElementById('toggleWishlistBtn');
+        const icon = document.getElementById('wishlistHeartIcon');
+        
+        btn.style.transform = 'scale(0.8)';
+        setTimeout(() => btn.style.transform = 'scale(1)', 150);
+
+        const up = allUsers[currentUser.uid] || {};
+        const wishlistObj = up.wishlist || {};
+        
+        const isWishlisted = !!wishlistObj[currentProfileId];
+        
+        if (isWishlisted) {
+            delete wishlistObj[currentProfileId];
+            icon.setAttribute('fill', 'none');
+            icon.setAttribute('stroke', 'white');
+        } else {
+            wishlistObj[currentProfileId] = true;
+            icon.setAttribute('fill', '#ec4899');
+            icon.setAttribute('stroke', '#ec4899');
+            
+            // Play sound
+            wishlistSound.currentTime = 0;
+            wishlistSound.play().catch(e => console.log('Audio play prevented', e));
+        }
+        
+        // Save to Firebase
+        await set(ref(db, "users/" + currentUser.uid + "/wishlist"), wishlistObj);
+        
+        if (allUsers[currentUser.uid]) {
+            allUsers[currentUser.uid].wishlist = wishlistObj;
+        }
+
+        // Refresh UI
+        filterAndRenderEditors();
+        renderTrending();
+        renderWishlist();
+
+    } catch (e) {
+        console.error(e);
+        alert('Could not update wishlist.');
+    }
+});
 
 // Workflow: Send Request / Leave Review / Waitlist
 document.getElementById('contactEditorBtn').addEventListener('click', async () => {
@@ -969,6 +1076,7 @@ window.deleteUserJobApp = async (appId) => {
         renderUserApplicationsList();
         filterAndRenderEditors();
         renderTrending();
+        renderWishlist();
     } catch(e) {
         console.error(e);
         alert('Failed to schedule deletion.');
@@ -990,6 +1098,7 @@ window.recoverUserJobApp = async (appId) => {
         renderUserApplicationsList();
         filterAndRenderEditors();
         renderTrending();
+        renderWishlist();
     } catch(e) {
         console.error(e);
         alert('Failed to recover application.');
@@ -1156,11 +1265,23 @@ window.viewAdminRequests = function(editorId) {
         listContainer.innerHTML = '<p class="text-center text-secondary">No requests for this editor yet.</p>';
     } else {
         reqs.forEach(r => {
+            const reqUser = allUsers[r.userId] || {};
+            const userName = reqUser.firstName ? (reqUser.firstName + ' ' + (reqUser.lastName||'')).trim() : 'Unknown Name';
+            const userPhone = reqUser.phone || 'No phone provided';
+            const userPhoto = reqUser.photoUrl || 'https://via.placeholder.com/60';
+
             const div = document.createElement('div');
             div.className = 'glass-card mb-3 p-3';
             div.style.border = '1px solid var(--glass-border)';
             div.innerHTML = `
-                <p><strong>User:</strong> ${r.userEmail}</p>
+                <div style="display:flex; gap:15px; align-items:center; margin-bottom:10px;">
+                    <img src="${userPhoto}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--primary);">
+                    <div>
+                        <h4 style="margin:0;">${userName}</h4>
+                        <p style="margin:2px 0 0; font-size:0.9rem; color:var(--text-secondary);">📧 ${r.userEmail}</p>
+                        <p style="margin:2px 0 0; font-size:0.9rem; color:var(--text-secondary);">📞 ${userPhone}</p>
+                    </div>
+                </div>
                 <p><strong>Status:</strong> ${r.status}</p>
                 <p><strong>Date:</strong> ${new Date(r.timestamp).toLocaleString()}</p>
                 <div class="mt-2 text-right">
@@ -1192,6 +1313,7 @@ window.updateAdminRequest = async function(reqId, newStatus) {
         // Re-render the modal
         // Find which editor's requests we are viewing (just pick it from the request if we can)
         document.getElementById('adminRequestsModal').style.display = 'none';
+        renderAdminList();
         alert('Request updated.');
         // No auto-re-open here, simplistic
     } catch(err) {
@@ -1378,9 +1500,15 @@ if(document.getElementById('closeAdminPanelBtn')) {
 }
 
 function renderAdminList() {
-    document.getElementById('statTotal').textContent = editors.length;
-    document.getElementById('statFeatured').textContent = editors.filter(e => e.isFeatured).length;
-    document.getElementById('statVerified').textContent = editors.filter(e => e.isVerified || e.verificationType === 'blue' || e.verificationType === 'golden').length;
+    const totalUsers = Object.keys(allUsers || {}).length;
+    const totalViews = editors.reduce((sum, ed) => sum + (ed.views || 0), 0);
+    
+    if (document.getElementById('statTotalUsers')) document.getElementById('statTotalUsers').textContent = totalUsers;
+    if (document.getElementById('statTotalViews')) document.getElementById('statTotalViews').textContent = totalViews;
+
+    if (document.getElementById('statTotal')) document.getElementById('statTotal').textContent = editors.length;
+    if (document.getElementById('statFeatured')) document.getElementById('statFeatured').textContent = editors.filter(e => e.isFeatured).length;
+    if (document.getElementById('statVerified')) document.getElementById('statVerified').textContent = editors.filter(e => e.isVerified || e.verificationType === 'blue' || e.verificationType === 'golden').length;
     
     const tbody = document.getElementById('adminEditorsList');
     tbody.innerHTML = '';
@@ -1393,6 +1521,9 @@ function renderAdminList() {
             verifiedText = '<span class="text-success text-xs pl-1">✓ Blue</span>';
         }
         
+        const reqs = allRequests.filter(r => r.editorId === ed.id);
+        const pendingCount = reqs.filter(r => r.status === 'pending').length;
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><img src="${ed.photo_url || 'https://via.placeholder.com/40'}" class="table-img"></td>
@@ -1405,7 +1536,10 @@ function renderAdminList() {
                 ${ed.isFeatured ? '<span style="color:var(--primary); font-size:0.8rem; margin-left:5px;">[Featured]</span>' : ''}
             </td>
             <td style="display: flex; gap: 5px;">
-                <button class="btn primary btn-sm" onclick="window.viewAdminRequests('${ed.id}')">Requests</button>
+                <button class="btn primary btn-sm" style="position:relative;" onclick="window.viewAdminRequests('${ed.id}')">
+                    Requests
+                    ${pendingCount > 0 ? `<span style="position:absolute; top:-8px; right:-8px; background:red; color:white; border-radius:50%; width:20px; height:20px; font-size:12px; display:flex; align-items:center; justify-content:center;">${pendingCount}</span>` : ''}
+                </button>
                 <button class="btn secondary btn-sm" onclick="window.editAdminEditor('${ed.id}')">Edit</button>
                 <button class="btn danger btn-sm" onclick="window.deleteAdminEditor('${ed.id}')">Delete</button>
             </td>
@@ -1438,6 +1572,48 @@ function renderAdminList() {
             });
         }
     }
+
+    const usersTbody = document.getElementById('adminUsersList');
+    if (usersTbody) {
+        usersTbody.innerHTML = '';
+        const userKeys = Object.keys(allUsers || {});
+        if (userKeys.length === 0) {
+            usersTbody.innerHTML = '<tr><td colspan="5" class="text-center text-secondary text-sm">No users found.</td></tr>';
+        } else {
+            userKeys.forEach(uid => {
+                const u = allUsers[uid];
+                const tr = document.createElement('tr');
+                const fullName = u.firstName ? (u.firstName + ' ' + (u.lastName || '')).trim() : 'Anonymous';
+                tr.innerHTML = `
+                    <td><img src="${u.photoUrl || 'https://via.placeholder.com/40'}" class="table-img"></td>
+                    <td><strong>${fullName}</strong></td>
+                    <td><span class="text-xs text-secondary">${uid}</span></td>
+                    <td>${u.phone || '-'}</td>
+                    <td>
+                        <button class="btn btn-sm secondary" onclick="window.viewAdminUserProfile('${uid}')">Profile</button>
+                    </td>
+                `;
+                usersTbody.appendChild(tr);
+            });
+        }
+    }
+}
+
+window.viewAdminUserProfile = function(uid) {
+    const u = allUsers[uid];
+    if (!u) return;
+    document.getElementById('adminUpAvatar').src = u.photoUrl || 'https://via.placeholder.com/100';
+    document.getElementById('adminUpName').textContent = u.firstName ? (u.firstName + ' ' + (u.lastName || '')).trim() : 'Anonymous User';
+    document.getElementById('adminUpEmail').textContent = u.email || 'No email';
+    document.getElementById('adminUpPhone').textContent = u.phone || 'No phone';
+    document.getElementById('adminUpId').textContent = 'UID: ' + uid;
+    document.getElementById('adminUserProfileModal').style.display = 'flex';
+};
+
+if (document.getElementById('closeAdminUserProfile')) {
+    document.getElementById('closeAdminUserProfile').addEventListener('click', () => {
+        document.getElementById('adminUserProfileModal').style.display = 'none';
+    });
 }
 
 // Job Application Actions
