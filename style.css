@@ -483,6 +483,16 @@ input:checked + .slider:before { transform: translateX(20px); }
 .profile-stats-list p { margin-bottom: 8px; font-size: 0.9rem; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
 
 .profile-section { margin-bottom: 2rem; }
+
+@keyframes badgeBlink {
+    0% { transform: scale(1); filter: drop-shadow(0 0 2px currentColor); opacity: 1; }
+    50% { transform: scale(1.2); filter: drop-shadow(0 0 12px currentColor); opacity: 0.4; }
+    100% { transform: scale(1); filter: drop-shadow(0 0 2px currentColor); opacity: 1; }
+}
+.blink-badge svg {
+    animation: badgeBlink 1.5s infinite ease-in-out;
+}
+
 .profile-section h3 { border-bottom: 1px solid var(--glass-border); padding-bottom: 8px; margin-bottom: 12px; font-size: 1.25rem; }
 .bio-text { line-height: 1.7; color: var(--text-secondary); font-size: 0.95rem; }
 .skills-list { display: flex; flex-wrap: wrap; gap: 8px; }

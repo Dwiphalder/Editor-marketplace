@@ -348,50 +348,51 @@ if(bottomNavProfile) {
         window.openUserProfileModal(false);
     });
 }
-if(bottomNavHome && bottomNavJobs && homeView && jobsView) {
-    function switchNavView(view) {
-        if(view === 'home') {
-            homeView.style.display = 'block';
-            jobsView.style.display = 'none';
-            bottomNavHome.classList.add('active');
-            bottomNavJobs.classList.remove('active');
-        } else if(view === 'jobs') {
-            homeView.style.display = 'none';
-            jobsView.style.display = 'block';
-            bottomNavJobs.classList.add('active');
-            bottomNavHome.classList.remove('active');
-            populateJobFormFromProfile();
-        }
+window.switchNavView = function(view) {
+    if(view === 'home') {
+        if(homeView) homeView.style.display = 'block';
+        if(jobsView) jobsView.style.display = 'none';
+        if(bottomNavHome) bottomNavHome.classList.add('active');
+        if(bottomNavJobs) bottomNavJobs.classList.remove('active');
+    } else if(view === 'jobs') {
+        if(homeView) homeView.style.display = 'none';
+        if(jobsView) jobsView.style.display = 'block';
+        if(bottomNavJobs) bottomNavJobs.classList.add('active');
+        if(bottomNavHome) bottomNavHome.classList.remove('active');
+        populateJobFormFromProfile();
     }
+};
+
+if(bottomNavHome && bottomNavJobs && homeView && jobsView) {
     bottomNavHome.addEventListener('click', (e) => {
         e.preventDefault();
-        switchNavView('home');
+        window.switchNavView('home');
     });
     bottomNavJobs.addEventListener('click', (e) => {
         e.preventDefault();
-        switchNavView('jobs');
+        window.switchNavView('jobs');
     });
 }
 
 function populateJobFormFromProfile() {
     if(!currentUser) {
         document.getElementById('jobsCompleteProfileMsg').classList.remove('hidden');
+        document.getElementById('submitJobReqBtn').disabled = true;
         return;
     }
     const up = allUsers[currentUser.uid] || {};
-    if(!up.firstName || !up.phone) {
-        document.getElementById('jobsCompleteProfileMsg').classList.remove('hidden');
-        document.getElementById('submitJobReqBtn').disabled = true;
-    } else {
-        document.getElementById('jobsCompleteProfileMsg').classList.add('hidden');
-        document.getElementById('submitJobReqBtn').disabled = false;
-        document.getElementById('jobName').value = up.firstName + ' ' + (up.lastName||'');
-        const defaultPic = up.photoUrl || currentUser.photoURL || 'https://via.placeholder.com/80';
-        const avatarPrev = document.getElementById('jobAvatarPreview');
-        if(!document.getElementById('jobAvatarUrl').value) {
-            avatarPrev.src = defaultPic;
-            document.getElementById('jobAvatarUrl').value = defaultPic;
-        }
+    
+    document.getElementById('jobsCompleteProfileMsg').classList.add('hidden');
+    document.getElementById('submitJobReqBtn').disabled = false;
+    document.getElementById('jobName').value = up.firstName ? (up.firstName + ' ' + (up.lastName||'').trim()) : '';
+    document.getElementById('jobEmail').value = currentUser.email || '';
+    document.getElementById('jobPhone').value = up.phone || '';
+    
+    const defaultPic = up.photoUrl || currentUser.photoURL || 'https://via.placeholder.com/80';
+    const avatarPrev = document.getElementById('jobAvatarPreview');
+    if(!document.getElementById('jobAvatarUrl').value) {
+        avatarPrev.src = defaultPic;
+        document.getElementById('jobAvatarUrl').value = defaultPic;
     }
 }
 
@@ -458,7 +459,16 @@ async function fetchEditors() {
 
 // Render Logic
 function generateCardHTML(editor, index = 0) {
-    const verifiedIcon = editor.isVerified ? '<span class="verified-badge" title="Verified">✓</span>' : '';
+    let verifiedIcon = '';
+    let cardBorderStyle = '';
+    
+    if (editor.verificationType === 'golden') {
+        verifiedIcon = `<span class="verified-badge golden blink-badge" title="Trusted Profile" style="position: absolute; top: 12px; right: 12px; z-index: 10; background: var(--bg-card); border-radius: 50%; display: flex; box-shadow: 0 2px 10px rgba(0,0,0,0.5);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32"><path fill="#F5C34B" d="M22.5 12.5l-1.58 1.58.21 2.24-2.24.21-1.27 1.86-2.16-.92-1.66 1.48L12 17.5l-1.8 1.45-1.66-1.48-2.16.92-1.27-1.86-2.24-.21.21-2.24L1.5 12.5l1.58-1.58-.21-2.24 2.24-.21 1.27-1.86 2.16.92 1.66-1.48L12 6.5l1.8-1.45 1.66 1.48 2.16-.92 1.27 1.86 2.24.21-.21 2.24 1.58 1.58z" /><path fill="#fff" d="M10.5 16l-3.5-3.5 1.4-1.4 2.1 2.1 5.6-5.6 1.4 1.4-7 7z" /></svg></span>`;
+        cardBorderStyle = 'border: 2px solid #F5C34B; box-shadow: 0 4px 15px rgba(245, 195, 75, 0.2);';
+    } else if (editor.verificationType === 'blue' || editor.isVerified) {
+        verifiedIcon = `<span class="verified-badge blink-badge" title="Verified" style="position: absolute; top: 12px; right: 12px; z-index: 10; background: var(--bg-card); border-radius: 50%; display: flex; box-shadow: 0 2px 10px rgba(0,0,0,0.5);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32"><path fill="#1d9bf0" d="M22.5 12.5l-1.58 1.58.21 2.24-2.24.21-1.27 1.86-2.16-.92-1.66 1.48L12 17.5l-1.8 1.45-1.66-1.48-2.16.92-1.27-1.86-2.24-.21.21-2.24L1.5 12.5l1.58-1.58-.21-2.24 2.24-.21 1.27-1.86 2.16.92 1.66-1.48L12 6.5l1.8-1.45 1.66 1.48 2.16-.92 1.27 1.86 2.24.21-.21 2.24 1.58 1.58z" /><path fill="#fff" d="M10.5 16l-3.5-3.5 1.4-1.4 2.1 2.1 5.6-5.6 1.4 1.4-7 7z" /></svg></span>`;
+        cardBorderStyle = 'border: 2px solid #10B981; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);';
+    }
     
     // Calculate real rating
     const editorReviews = allReviews.filter(r => r.editorId === editor.id);
@@ -469,19 +479,28 @@ function generateCardHTML(editor, index = 0) {
     }
     const ratingText = editorReviews.length > 0 ? `⭐ ${avgRating} / ${editorReviews.length} reviews` : `⭐ New / 0 reviews`;
     
+    let priceText = `₹${editor.price || 0}`;
+    if(editor.maxPrice) {
+        priceText += ` - ₹${editor.maxPrice}`;
+    }
+
     // Convert video clips string to array
     const clips = editor.video_clips ? editor.video_clips.split(',').slice(0, 2) : [];
     
     let clipsPreviewHTML = '';
 
     return `
-        <div class="editor-card new-style animate-fade" data-id="${editor.id}" style="animation-delay: ${index * 0.1}s">
+        <div class="editor-card new-style animate-fade" data-id="${editor.id}" style="animation-delay: ${index * 0.1}s; ${cardBorderStyle}">
+            ${verifiedIcon}
             <div class="card-image-bg" style="background-image: url('${editor.photo_url || 'https://images.unsplash.com/photo-1600486913747-55e5470d6f40?crop=entropy&fit=max&fm=jpg&q=80&w=400'}')"></div>
             <div class="card-overlay"></div>
             <div class="card-content">
-                <h3 class="name font-title">${editor.name} ${verifiedIcon}</h3>
+                <h3 class="name font-title">${editor.name}</h3>
                 <p class="title">${editor.category} Editor</p>
-                <p class="reviews">${ratingText}</p>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <p class="reviews" style="margin-bottom:8px;">${ratingText}</p>
+                    <p class="price-range" style="font-size:0.85rem; font-weight:600; color:white; background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; margin-bottom:8px;">${priceText}</p>
+                </div>
                 ${clipsPreviewHTML}
                 <div class="card-actions">
                     <button class="btn btn-hire">Hire Now</button>
@@ -493,7 +512,7 @@ function generateCardHTML(editor, index = 0) {
 }
 
 function renderTrending() {
-    let trendingPool = editors.filter(ed => ed.isFeatured === true);
+    let trendingPool = editors.filter(ed => ed.isFeatured === true && !ed.deletionScheduledAt);
 
     if (trendingPool.length > 0) {
         trendingSection.style.display = 'block';
@@ -518,30 +537,43 @@ function filterAndRenderEditors() {
     const term = (searchInput && searchInput.value ? searchInput.value : '').toLowerCase();
     loadingMain.style.display = 'none';
     
-    const bdg = document.getElementById('filterBudget') ? document.getElementById('filterBudget').value : 'All';
-    const toolVal = document.getElementById('filterTool') ? document.getElementById('filterTool').value : 'All';
-    const tool = (toolVal || '').toLowerCase();
+    const filterRating = document.getElementById('filterRating') ? document.getElementById('filterRating').value : 'All';
+    const filterType = document.getElementById('filterType') ? document.getElementById('filterType').value : 'All';
+    const sortPrice = document.getElementById('sortPrice') ? document.getElementById('sortPrice').value : 'None';
 
     let filtered = editors.filter(ed => {
+        if (ed.deletionScheduledAt) return false;
+
         const safeName = (ed.name || '').toString().toLowerCase();
         const safeSkills = (ed.skills || '').toString().toLowerCase();
         
         const matchSearch = safeName.includes(term) || safeSkills.includes(term);
         const matchCat = currentCategory === 'All' ? true : ed.category === currentCategory;
         
-        let matchBudget = true;
-        if (bdg === 'Under50') matchBudget = ed.price < 50;
-        else if (bdg === '50To100') matchBudget = (ed.price >= 50 && ed.price <= 100);
-        else if (bdg === 'Over100') matchBudget = ed.price > 100;
-        
-        let matchTool = true;
-        if (tool !== 'all') {
-            const toolsStr = ((ed.tools || '') + ' ' + (ed.skills || '')).toLowerCase();
-            matchTool = toolsStr.includes(tool);
+        // Rating calculation
+        const editorReviews = allReviews.filter(r => r.editorId === ed.id);
+        let avgRating = 0;
+        if (editorReviews.length > 0) {
+            const sum = editorReviews.reduce((acc, curr) => acc + (curr.rating || 0), 0);
+            avgRating = sum / editorReviews.length;
         }
 
-        return matchSearch && matchCat && matchBudget && matchTool;
+        let matchRating = true;
+        if (filterRating === '4+') matchRating = avgRating >= 4.0;
+        if (filterRating === '3+') matchRating = avgRating >= 3.0;
+
+        let matchType = true;
+        if (filterType === 'New') matchType = editorReviews.length === 0;
+        if (filterType === 'Experienced') matchType = editorReviews.length > 0;
+        
+        return matchSearch && matchCat && matchRating && matchType;
     });
+
+    if (sortPrice === 'LowToHigh') {
+        filtered.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
+    } else if (sortPrice === 'HighToLow') {
+        filtered.sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0));
+    }
     
     mainGrid.innerHTML = '';
     
@@ -555,8 +587,9 @@ function filterAndRenderEditors() {
 
 // User Interactions
 if(searchInput) searchInput.addEventListener('input', filterAndRenderEditors);
-if(document.getElementById('filterBudget')) document.getElementById('filterBudget').addEventListener('change', filterAndRenderEditors);
-if(document.getElementById('filterTool')) document.getElementById('filterTool').addEventListener('change', filterAndRenderEditors);
+if(document.getElementById('filterRating')) document.getElementById('filterRating').addEventListener('change', filterAndRenderEditors);
+if(document.getElementById('filterType')) document.getElementById('filterType').addEventListener('change', filterAndRenderEditors);
+if(document.getElementById('sortPrice')) document.getElementById('sortPrice').addEventListener('change', filterAndRenderEditors);
 
 filterChips.forEach(chip => {
     chip.addEventListener('click', (e) => {
@@ -581,10 +614,22 @@ document.addEventListener('click', (e) => {
                 return;
             }
             if (ed) {
-                document.getElementById('contactEmail').href = ed.email ? `mailto:${ed.email}` : '#';
-                if(ed.whatsapp) {
-                    const cleanNo = ed.whatsapp.replace(/[^0-9]/g, '');
+                if (ed.email) {
+                    document.getElementById('contactEmail').href = `mailto:${ed.email}`;
+                    document.getElementById('contactEmail').style.display = 'inline-block';
+                } else {
+                    document.getElementById('contactEmail').href = '#';
+                    document.getElementById('contactEmail').style.display = 'none';
+                }
+                
+                const phoneNum = ed.whatsapp || ed.phone;
+                if(phoneNum) {
+                    const cleanNo = phoneNum.replace(/[^0-9]/g, '');
                     document.getElementById('contactWhatsapp').href = `https://wa.me/${cleanNo}`;
+                    document.getElementById('contactWhatsapp').style.display = 'inline-block';
+                } else {
+                    document.getElementById('contactWhatsapp').href = '#';
+                    document.getElementById('contactWhatsapp').style.display = 'none';
                 }
                 contactModal.style.display = 'flex';
             }
@@ -618,9 +663,28 @@ function openEditorProfile(id) {
     update(ref(db, "editors/" + id), { views: newViews });
     
     const verifiedBadge = document.getElementById('epVerified');
+    const epAvatar = document.getElementById('epAvatar');
+    const modalBody = document.querySelector('#editorProfileModal .modal-body');
+    
+    // reset border and bg
+    if(epAvatar) epAvatar.style.border = '4px solid var(--glass-bg)';
+    if(modalBody) modalBody.style.background = '';
+    
     if (verifiedBadge) {
-        if (ed.isVerified) { verifiedBadge.classList.remove('hidden'); }
-        else { verifiedBadge.classList.add('hidden'); }
+        if (ed.verificationType === 'golden') {
+            verifiedBadge.title = "Premium Verified";
+            verifiedBadge.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28"><path fill="#F5C34B" d="M22.5 12.5l-1.58 1.58.21 2.24-2.24.21-1.27 1.86-2.16-.92-1.66 1.48L12 17.5l-1.8 1.45-1.66-1.48-2.16.92-1.27-1.86-2.24-.21.21-2.24L1.5 12.5l1.58-1.58-.21-2.24 2.24-.21 1.27-1.86 2.16.92 1.66-1.48L12 6.5l1.8-1.45 1.66 1.48 2.16-.92 1.27 1.86 2.24.21-.21 2.24 1.58 1.58z" /><path fill="#fff" d="M10.5 16l-3.5-3.5 1.4-1.4 2.1 2.1 5.6-5.6 1.4 1.4-7 7z" /></svg>';
+            verifiedBadge.classList.remove('hidden');
+            if(epAvatar) epAvatar.style.border = '4px solid #F5C34B';
+            if(modalBody) modalBody.style.background = 'linear-gradient(180deg, rgba(245, 195, 75, 0.15) 0%, rgba(245, 195, 75, 0.05) 50%, transparent 100%)';
+        } else if (ed.verificationType === 'blue' || ed.isVerified) {
+            verifiedBadge.title = "Verified";
+            verifiedBadge.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28"><path fill="#1d9bf0" d="M22.5 12.5l-1.58 1.58.21 2.24-2.24.21-1.27 1.86-2.16-.92-1.66 1.48L12 17.5l-1.8 1.45-1.66-1.48-2.16.92-1.27-1.86-2.24-.21.21-2.24L1.5 12.5l1.58-1.58-.21-2.24 2.24-.21 1.27-1.86 2.16.92 1.66-1.48L12 6.5l1.8-1.45 1.66 1.48 2.16-.92 1.27 1.86 2.24.21-.21 2.24 1.58 1.58z" /><path fill="#fff" d="M10.5 16l-3.5-3.5 1.4-1.4 2.1 2.1 5.6-5.6 1.4 1.4-7 7z" /></svg>';
+            verifiedBadge.classList.remove('hidden');
+            if(epAvatar) epAvatar.style.border = '4px solid #10B981'; // User requested green border for blue verify
+        } else {
+            verifiedBadge.classList.add('hidden');
+        }
     }
     
     // Banner
@@ -671,7 +735,9 @@ function openEditorProfile(id) {
     document.getElementById('epProjects').textContent = ed.projects || 0;
     document.getElementById('epBio').textContent = ed.bio || 'No professional summary provided.';
     document.getElementById('epExperience').textContent = ed.experience || 'Not specified';
-    document.getElementById('epPrice').textContent = ed.price || '0';
+    let epPriceText = ed.price || '0';
+    if(ed.maxPrice) epPriceText += ` - ₹${ed.maxPrice}`;
+    document.getElementById('epPrice').textContent = epPriceText;
     document.getElementById('epAvailability').textContent = ed.availability || 'Available';
     
     // Determine the user's request state for this editor
@@ -860,7 +926,16 @@ function renderUserApplicationsList() {
     list.innerHTML = apps.map(app => {
         let statusColor = app.status === 'pending' ? 'var(--warning)' : (app.status === 'approved' ? 'var(--success)' : 'var(--danger)');
         
-        return `<div class="p-3 mb-3" style="background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid var(--glass-border);">
+        let priceText = `₹${app.price}`;
+        if(app.maxPrice) priceText += ` - ₹${app.maxPrice}`;
+        
+        const deleteButtonInfo = app.deletionScheduledAt ? 
+            `<button class="btn success btn-sm" onclick="window.recoverUserJobApp('${app.id}')">Recover (30m)</button>` : 
+            `<button class="btn danger btn-sm" onclick="window.deleteUserJobApp('${app.id}')">Remove</button>`;
+
+        const pendingDeletionWarning = app.deletionScheduledAt ? `<p class="text-xs text-danger mb-2">Scheduled for deletion soon.</p>` : '';
+
+        return `<div class="p-3 mb-3" style="background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid var(--glass-border); ${app.deletionScheduledAt ? 'opacity: 0.6;' : ''}">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
                 <div>
                     <h4 style="margin:0; font-size:1.1rem;">${app.category} Editor ${app.style ? ' - ' + app.style : ''}</h4>
@@ -868,24 +943,56 @@ function renderUserApplicationsList() {
                 </div>
                 <span class="text-sm font-bold" style="color:${statusColor}; text-transform:uppercase;">${app.status || 'Pending'}</span>
             </div>
-            <p class="text-sm mb-2" style="color:#d1d5db;">Price: ₹${app.price} | Exp: ${app.experience}</p>
+            ${pendingDeletionWarning}
+            <p class="text-sm mb-2" style="color:#d1d5db;">Price: ${priceText} | Exp: ${app.experience}</p>
             <div style="display:flex; gap:10px; margin-top:10px;">
-                <button class="btn secondary btn-sm" onclick="window.editUserJobApp('${app.id}')">Update</button>
-                <button class="btn danger btn-sm" onclick="window.deleteUserJobApp('${app.id}')">Remove</button>
+                <button class="btn secondary btn-sm" onclick="window.editUserJobApp('${app.id}')" ${app.deletionScheduledAt ? 'disabled' : ''}>Update</button>
+                ${deleteButtonInfo}
             </div>
         </div>`;
     }).join('');
 }
 
 window.deleteUserJobApp = async (appId) => {
-    if(!confirm("Are you sure you want to remove your application?")) return;
+    if(!confirm("Are you sure? It will be deleted in 30 minutes, but you can recover it before then. Your public profile will also be hidden.")) return;
     try {
-        await remove(ref(db, "editor_applications/" + appId));
-        allApplications = allApplications.filter(a => a.id !== appId);
+        await update(ref(db, "editor_applications/" + appId), { deletionScheduledAt: Date.now() });
+        const app = allApplications.find(a => a.id === appId);
+        if(app) {
+            app.deletionScheduledAt = Date.now();
+            const ed = editors.find(e => e.userId === app.userId);
+            if(ed) {
+                await update(ref(db, "editors/" + ed.id), { deletionScheduledAt: Date.now() });
+                ed.deletionScheduledAt = Date.now();
+            }
+        }
         renderUserApplicationsList();
+        filterAndRenderEditors();
+        renderTrending();
     } catch(e) {
         console.error(e);
-        alert('Failed to remove application.');
+        alert('Failed to schedule deletion.');
+    }
+};
+
+window.recoverUserJobApp = async (appId) => {
+    try {
+        await update(ref(db, "editor_applications/" + appId), { deletionScheduledAt: null });
+        const app = allApplications.find(a => a.id === appId);
+        if(app) {
+            app.deletionScheduledAt = null;
+            const ed = editors.find(e => e.userId === app.userId);
+            if(ed) {
+                await update(ref(db, "editors/" + ed.id), { deletionScheduledAt: null });
+                ed.deletionScheduledAt = null;
+            }
+        }
+        renderUserApplicationsList();
+        filterAndRenderEditors();
+        renderTrending();
+    } catch(e) {
+        console.error(e);
+        alert('Failed to recover application.');
     }
 };
 
@@ -895,21 +1002,27 @@ window.editUserJobApp = (appId) => {
     
     // Switch to jobs view
     userProfileModal.style.display = 'none';
-    switchNavView('jobs');
+    window.switchNavView('jobs');
     
-    // Fill the jobs form with the data
-    document.getElementById('jobCategory').value = app.category;
-    if(document.getElementById('jobStyle')) document.getElementById('jobStyle').value = app.style || '';
-    document.getElementById('jobPrice').value = app.price;
-    document.getElementById('jobExperience').value = app.experience;
-    document.getElementById('jobSkills').value = app.skills;
-    document.getElementById('jobTools').value = app.tools;
-    document.getElementById('jobBio').value = app.bio;
-    document.getElementById('jobPortfolio').value = app.portfolio || '';
-    document.getElementById('jobVideoClips').value = app.videoLinks ? (Array.isArray(app.videoLinks) ? app.videoLinks.join(', ') : app.videoLinks) : '';
+    // Fill the jobs form with the data safely
+    const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
     
-    document.getElementById('jobAvatarUrl').value = app.photo_url || '';
-    document.getElementById('jobBannerUrl').value = app.banner_url || '';
+    setVal('jobName', app.name || '');
+    setVal('jobEmail', app.email || '');
+    setVal('jobPhone', app.phone || '');
+    setVal('jobCategory', app.category);
+    setVal('jobStyle', app.style || '');
+    setVal('jobPrice', app.price);
+    setVal('jobMaxPrice', app.maxPrice || '');
+    setVal('jobExperience', app.experience);
+    setVal('jobSkills', app.skills);
+    setVal('jobTools', app.tools || '');
+    setVal('jobBio', app.bio);
+    setVal('jobPortfolio', app.portfolio || '');
+    setVal('jobVideoClips', app.videoLinks ? (Array.isArray(app.videoLinks) ? app.videoLinks.join(', ') : app.videoLinks) : '');
+    
+    setVal('jobAvatarUrl', app.photo_url || '');
+    setVal('jobBannerUrl', app.banner_url || '');
     
     const avatarPrev = document.getElementById('jobAvatarPreview');
     const bannerPrev = document.getElementById('jobBannerPreview');
@@ -1256,17 +1369,30 @@ function openAdminPanel() {
     renderAdminList();
 }
 
-if(document.getElementById('closeAdminPanelBtn')) document.getElementById('closeAdminPanelBtn').addEventListener('click', () => { adminPanelOverlay.style.display = 'none'; });
+if(document.getElementById('closeAdminPanelBtn')) {
+    document.getElementById('closeAdminPanelBtn').addEventListener('click', () => { 
+        adminPanelOverlay.style.display = 'none'; 
+        mainApp.style.display = 'block'; 
+        window.switchNavView('home');
+    });
+}
 
 function renderAdminList() {
     document.getElementById('statTotal').textContent = editors.length;
     document.getElementById('statFeatured').textContent = editors.filter(e => e.isFeatured).length;
-    document.getElementById('statVerified').textContent = editors.filter(e => e.isVerified).length;
+    document.getElementById('statVerified').textContent = editors.filter(e => e.isVerified || e.verificationType === 'blue' || e.verificationType === 'golden').length;
     
     const tbody = document.getElementById('adminEditorsList');
     tbody.innerHTML = '';
     
     editors.forEach(ed => {
+        let verifiedText = '';
+        if (ed.verificationType === 'golden') {
+            verifiedText = '<span class="text-xs pl-1" style="color:var(--warning);">★ Golden</span>';
+        } else if (ed.verificationType === 'blue' || ed.isVerified) {
+            verifiedText = '<span class="text-success text-xs pl-1">✓ Blue</span>';
+        }
+        
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><img src="${ed.photo_url || 'https://via.placeholder.com/40'}" class="table-img"></td>
@@ -1275,7 +1401,7 @@ function renderAdminList() {
             <td>₹${ed.price}</td>
             <td>${ed.views || 0}</td>
             <td>
-                ${ed.isVerified ? '<span class="text-success text-sm pl-1">✓ Verified</span>' : ''}
+                ${verifiedText}
                 ${ed.isFeatured ? '<span style="color:var(--primary); font-size:0.8rem; margin-left:5px;">[Featured]</span>' : ''}
             </td>
             <td style="display: flex; gap: 5px;">
@@ -1342,6 +1468,7 @@ window.approveJobApp = async (appId) => {
             availability: 'Available',
             projects: 0,
             views: 0,
+            verificationType: 'blue',
             isVerified: true,  // Automatically verify when approved via admin
             isFeatured: false,
             createdAt: Date.now()
@@ -1405,7 +1532,7 @@ function clearEditorForm() {
     document.getElementById('edWhatsapp').value = '';
     document.getElementById('edPortfolio').value = '';
     document.getElementById('edIsFeatured').checked = false;
-    document.getElementById('edIsVerified').checked = false;
+    document.getElementById('edVerificationType').value = 'none';
     
     document.getElementById('edAvatarPreview').style.display = 'none';
     document.getElementById('edBannerPreview').style.display = 'none';
@@ -1448,7 +1575,7 @@ window.viewEditJobApp = (appId) => {
     }
     
     document.getElementById('edIsFeatured').checked = false;
-    document.getElementById('edIsVerified').checked = true; // Apps usually become verified automatically
+    document.getElementById('edVerificationType').value = 'blue'; // Apps usually become verified automatically
     
     editorFormModal.style.display = 'flex';
 };
@@ -1465,6 +1592,7 @@ window.editAdminEditor = (id) => {
     document.getElementById('edCategory').value = ed.category || 'Video';
     if(document.getElementById('edStyle')) document.getElementById('edStyle').value = ed.style || '';
     document.getElementById('edPrice').value = ed.price || '';
+    if(document.getElementById('edMaxPrice')) document.getElementById('edMaxPrice').value = ed.maxPrice || '';
     document.getElementById('edExperience').value = ed.experience || '';
     document.getElementById('edSkills').value = ed.skills || '';
     if(document.getElementById('edTools')) document.getElementById('edTools').value = ed.tools || '';
@@ -1478,7 +1606,12 @@ window.editAdminEditor = (id) => {
     document.getElementById('edWhatsapp').value = ed.whatsapp || '';
     document.getElementById('edPortfolio').value = ed.portfolio || '';
     document.getElementById('edIsFeatured').checked = !!ed.isFeatured;
-    document.getElementById('edIsVerified').checked = !!ed.isVerified;
+    
+    if (ed.verificationType) {
+        document.getElementById('edVerificationType').value = ed.verificationType;
+    } else {
+        document.getElementById('edVerificationType').value = ed.isVerified ? 'blue' : 'none';
+    }
     
     if(ed.photo_url) {
         document.getElementById('edAvatarPreview').src = ed.photo_url;
@@ -1509,11 +1642,13 @@ if(document.getElementById('saveEditorBtn')) document.getElementById('saveEditor
     const id = document.getElementById('editEditorId').value;
     const saveBtn = document.getElementById('saveEditorBtn');
     
+    const maxP = document.getElementById('edMaxPrice') ? document.getElementById('edMaxPrice').value : '';
     const payload = {
         name: document.getElementById('edName').value,
         category: document.getElementById('edCategory').value,
         style: document.getElementById('edStyle') ? document.getElementById('edStyle').value : '',
         price: Number(document.getElementById('edPrice').value),
+        maxPrice: maxP ? Number(maxP) : null,
         experience: document.getElementById('edExperience').value,
         skills: document.getElementById('edSkills').value,
         tools: document.getElementById('edTools') ? document.getElementById('edTools').value : '',
@@ -1527,7 +1662,8 @@ if(document.getElementById('saveEditorBtn')) document.getElementById('saveEditor
         whatsapp: document.getElementById('edWhatsapp').value,
         portfolio: document.getElementById('edPortfolio').value,
         isFeatured: document.getElementById('edIsFeatured').checked,
-        isVerified: document.getElementById('edIsVerified').checked,
+        verificationType: document.getElementById('edVerificationType').value,
+        isVerified: document.getElementById('edVerificationType').value === 'blue' || document.getElementById('edVerificationType').value === 'golden',
     };
     
     if(!payload.name || !payload.price) {
@@ -1694,12 +1830,13 @@ if(jobBannerUpload) {
 if(submitJobReqBtn) {
     submitJobReqBtn.addEventListener('click', async () => {
         if(!currentUser) return;
-        const up = allUsers[currentUser.uid];
-        if(!up) return;
-
+        const name = document.getElementById('jobName').value;
+        const email = document.getElementById('jobEmail').value;
+        const phone = document.getElementById('jobPhone').value;
         const category = document.getElementById('jobCategory').value;
         const style = document.getElementById('jobStyle') ? document.getElementById('jobStyle').value : '';
         const price = document.getElementById('jobPrice').value;
+        const maxPrice = document.getElementById('jobMaxPrice') ? document.getElementById('jobMaxPrice').value : '';
         const experience = document.getElementById('jobExperience').value;
         const skills = document.getElementById('jobSkills').value;
         const tools = document.getElementById('jobTools').value;
@@ -1709,10 +1846,11 @@ if(submitJobReqBtn) {
         const bannerUrl = document.getElementById('jobBannerUrl').value;
         const portfolio = document.getElementById('jobPortfolio').value;
 
-        if(!price || !experience || !skills || !bio) {
+        if(!name || !email || !phone || !price || !experience || !skills || !bio) {
             alert('Please fill out all required fields.');
             return;
         }
+
         if(!avatarUrl || !bannerUrl) {
             alert('Please upload both a profile avatar and a banner.');
             return;
@@ -1725,12 +1863,13 @@ if(submitJobReqBtn) {
 
         const reqPayload = {
             userId: currentUser.uid,
-            name: up.firstName + ' ' + (up.lastName || ''),
-            email: currentUser.email,
-            phone: up.phone,
+            name,
+            email,
+            phone,
             category,
             style,
             price: Number(price),
+            maxPrice: maxPrice ? Number(maxPrice) : null,
             experience,
             skills,
             tools,
@@ -1747,34 +1886,47 @@ if(submitJobReqBtn) {
             const updateId = submitJobReqBtn.dataset.updateId;
             if (updateId) {
                 // Updating existing app
-                await update(ref(db, "editor_applications/" + updateId), {
+                const updatePayload = {
                     ...reqPayload,
                     status: 'pending', // Resets to pending upon update
                     timestamp: Date.now()
-                });
+                };
+                await update(ref(db, "editor_applications/" + updateId), updatePayload);
+                
+                const idx = allApplications.findIndex(a => a.id === updateId);
+                if(idx !== -1) allApplications[idx] = { ...allApplications[idx], ...updatePayload };
+                
                 alert('Application updated successfully! Resubmitted for review.');
                 delete submitJobReqBtn.dataset.updateId;
                 submitJobReqBtn.textContent = 'Submit Application';
             } else {
                 const reqRef = push(ref(db, "editor_applications"));
-                await set(reqRef, reqPayload);
+                const newPayload = {
+                    ...reqPayload,
+                    status: 'pending',
+                    timestamp: Date.now()
+                };
+                await set(reqRef, newPayload);
+                allApplications.push({ id: reqRef.key, ...newPayload });
                 alert('Application submitted successfully! Our team will review your profile.');
             }
             
-            // Reset form
-            document.getElementById('jobPrice').value = '';
-            document.getElementById('jobExperience').value = '';
-            document.getElementById('jobSkills').value = '';
-            document.getElementById('jobTools').value = '';
-            document.getElementById('jobBio').value = '';
-            document.getElementById('jobVideoClips').value = '';
-            document.getElementById('jobPortfolio').value = '';
-            document.getElementById('jobBannerUrl').value = '';
-            document.getElementById('jobBannerPreview').src = '';
-            document.getElementById('jobBannerPreview').style.display = 'none';
+            submitJobReqBtn.disabled = false;
+            submitJobReqBtn.textContent = 'Submit Application';
+            
+            // Reset form safely
+            ['jobName', 'jobEmail', 'jobPhone', 'jobPrice', 'jobMaxPrice', 'jobExperience', 'jobSkills', 'jobTools', 'jobBio', 'jobVideoClips', 'jobPortfolio', 'jobBannerUrl'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.value = '';
+            });
+            const bannerPrev = document.getElementById('jobBannerPreview');
+            if (bannerPrev) {
+                bannerPrev.src = '';
+                bannerPrev.style.display = 'none';
+            }
 
             // Return to home view
-            switchNavView('home');
+            window.switchNavView('home');
         } catch(err) {
             console.error(err);
             alert('Error submitting application.');
