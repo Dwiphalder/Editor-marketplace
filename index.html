@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lumina - Editor Marketplace</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+    <!-- Welcome Screen -->
+    <div id="welcomeScreen" class="welcome-screen hidden">
+        <div class="welcome-card">
+            <h1 class="welcome-title gradient-text" id="welcomeText">Welcome to Lumina</h1>
+            <p class="text-secondary text-lg">We're glad to have you here, <span id="welcomeUserName"></span>!</p>
+        </div>
+    </div>
+
+    <!-- Auth Splash Screen -->
+    <div id="authScreen" class="auth-fullscreen-overlay">
+        <div class="auth-header">
+            <button class="icon-btn auth-settings-btn" id="authScreenSettingsBtn" title="Settings">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+        </div>
+        <div class="auth-glass-card hover-3d" id="auth3dCard">
+            <div class="logo text-center mb-4" style="justify-content:center; font-size:2rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                <span>Lumina</span>
+            </div>
+            <p class="text-center text-secondary mb-4">Sign in to continue to Marketplace</p>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tabLogin">Log In</button>
+                <button class="auth-tab" id="tabSignup">Sign Up</button>
+            </div>
+
+            <form id="authForm" class="auth-form mt-4">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="authEmail" placeholder="you@example.com" required>
+                </div>
+                <div class="form-group" style="position:relative;">
+                    <label>Password</label>
+                    <input type="password" id="authPassword" placeholder="••••••••" required>
+                    <button type="button" class="password-toggle" id="toggleAuthPassword" title="Show Password">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" class="eye-icon" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </button>
+                </div>
+                <!-- Phone Field (Optional for Phone Auth) -->
+                <div class="form-group hidden" id="phoneAuthGroup">
+                    <label>Or Phone Number (Format: +1234567890)</label>
+                    <input type="tel" id="authPhone" placeholder="+1234567890">
+                </div>
+
+                <p id="authErrorMsg" class="text-danger text-sm hidden text-center mb-2"></p>
+
+                <div id="signupWarning" class="form-group hidden" style="background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b; padding: 10px; border-radius: 4px; margin-bottom: 20px;">
+                    <p class="text-sm" style="color: #d97706; margin: 0;"><strong>Important:</strong> Please write down your email and password, or take a screenshot. You will need them to log in later!</p>
+                </div>
+
+                <button type="submit" class="btn primary w-100 btn-large" style="margin-top:0.5rem;" id="mainAuthBtn">Log In</button>
+            </form>
+
+            <div class="auth-divider">
+                <span>OR</span>
+            </div>
+
+            <div class="auth-social-buttons">
+                <button type="button" class="btn secondary w-100 mb-2" id="googleAuthBtn" style="justify-content:center; gap:10px; cursor: not-allowed; opacity: 0.7;">
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                    Continue with Google (Coming Soon)
+                </button>
+            </div>
+            <div id="recaptcha-container"></div>
+        </div>
+    </div>
+
+    <!-- Main Container Wrapper -->
+    <div id="mainApp" style="display: none; padding-bottom: 70px;">
+        <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container pb-2" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <div class="logo" id="homeLogo" style="gap: 8px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                <span style="font-weight: 500; font-size: 1.25rem;">Lumina <strong style="font-weight: 800;">Editors</strong></span>
+            </div>
+            <div class="nav-actions">
+                <button class="icon-btn" id="settingsBtn" title="Settings" style="background: none; border: none; color: white;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                </button>
+                <div id="authContainer">
+                    <button class="btn primary" id="loginBtn">Sign In</button>
+                    <div id="userProfile" style="display: none;" class="user-profile">
+                        <img id="userAvatar" src="data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'%3e%3c/path%3e%3ccircle cx='12' cy='7' r='4'%3e%3c/circle%3e%3c/svg%3e" alt="User" style="width:32px; height:32px; border-radius:50%; object-fit:cover; background-color:rgba(255,255,255,0.1); padding:4px;">
+                        <button class="icon-btn" id="logoutBtn" title="Log Out" style="background: none; border: none; color: white;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Desktop bottom nav equivalent / Mobile bottom Nav -->
+    <div class="bottom-nav">
+        <a href="#" class="nav-item active" id="bottomNavHome">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            <span>Home</span>
+        </a>
+        <a href="#" class="nav-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span>Explore</span>
+        </a>
+        <a href="#" class="nav-item" id="bottomNavJobs">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+            <span>Jobs</span>
+        </a>
+        <a href="#" class="nav-item" id="bottomNavProfile">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span>Profile</span>
+        </a>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-container pt-2">
+        <div id="homeView">
+        <!-- Main Interface -->
+        <section class="filter-section mt-4 mx-auto text-center" style="max-width: 800px; background: rgba(220, 38, 38, 0.05); padding: 2rem; border-radius: 24px; border: 1px solid rgba(220, 38, 38, 0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            
+            <h1 class="gradient-text tracking-tight mb-2 uppercase" style="font-family: 'Outfit', sans-serif; font-size: clamp(2rem, 5vw, 4rem); font-weight: 800; line-height: 1.1; letter-spacing: -1px;">FIND YOUR PERFECT EDITOR</h1>
+            <p class="text-secondary lg-text mb-6 uppercase" style="font-size: 1.1rem; max-width: 600px; margin: 0 auto; font-weight: 500;">HIRE TOP TALENT FOR YOUR VIDEO, PHOTO, AND AUDIO PROJECTS.</p>
+
+            <div class="search-bar-large" style="margin: 0 auto 1.5rem; max-width: 100%; box-shadow: none;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="searchInput" placeholder="Search editors by name or skill...">
+            </div>
+
+            <div class="filters-scroll" id="categoryFilters">
+                <button class="filter-chip active" data-cat="All">All Categories</button>
+                <button class="filter-chip" data-cat="Video">Video Editing</button>
+                <button class="filter-chip" data-cat="Photo">Photo Retouching</button>
+                <button class="filter-chip" data-cat="Motion">Motion Graphics</button>
+                <button class="filter-chip" data-cat="Audio">Audio Post-Production</button>
+            </div>
+            
+            <div class="advanced-filters mt-4 pt-4" style="border-top: 1px solid var(--glass-border);">
+                <select id="filterBudget">
+                    <option value="All">💰 Budget Range </option>
+                    <option value="Under50">Under ₹50</option>
+                    <option value="50To100">₹50 - ₹100</option>
+                    <option value="Over100">Over ₹100</option>
+                </select>
+                <select id="filterTool">
+                    <option value="All">🎛 Advanced Filters (Tools, Level)</option>
+                    <option value="Premiere Pro">Premiere Pro</option>
+                    <option value="CapCut">CapCut</option>
+                    <option value="DaVinci Resolve">DaVinci Resolve</option>
+                    <option value="After Effects">After Effects</option>
+                    <option value="Final Cut Pro">Final Cut Pro</option>
+                    <option value="Photoshop">Photoshop</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Trending Section -->
+        <section class="trending-section mt-4" id="trendingSection" style="display: none;">
+            <h2>🔥 Trending Editors</h2>
+            <div class="editors-grid trending-grid" id="trendingGrid"></div>
+        </section>
+
+        <!-- All Editors -->
+        <section class="all-editors-section mt-4">
+            <h2>Explore Editors</h2>
+            <div id="loadingMain" class="text-center p-4">
+                <div class="spinner"></div>
+                <p>Loading talent...</p>
+            </div>
+            <div class="editors-grid" id="mainGrid"></div>
+            <div id="emptyMain" class="text-center p-4" style="display: none; color: var(--text-secondary);">
+                No editors found matching your criteria.
+            </div>
+        </section>
+        </div>
+
+        <div id="jobsView" style="display: none;" class="mt-4 pb-10">
+            <section class="filter-section mx-auto text-center mb-6" style="max-width: 800px; background: rgba(38, 220, 100, 0.05); padding: 2rem; border-radius: 24px; border: 1px solid rgba(38, 220, 100, 0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                <h1 class="gradient-text tracking-tight mb-2 uppercase" style="font-family: 'Outfit', sans-serif; font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; line-height: 1.1; letter-spacing: -1px; background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">POST YOUR PROFILE</h1>
+                <p class="text-secondary lg-text uppercase" style="font-size: 1rem; max-width: 600px; margin: 0 auto; font-weight: 500;">Join our network as an editor and let clients reach out to you.</p>
+            </section>
+
+            <div class="glass-card w-100 p-4" style="max-width: 800px; margin: 0 auto;">
+                <h3 class="mb-4">Editor Application</h3>
+                <p id="jobsCompleteProfileMsg" class="text-secondary mb-4 hidden" style="color:var(--danger) !important;">Please complete your profile before applying. We need your Name and Phone Number.</p>
+                <div id="jobsFormArea">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" id="jobName" placeholder="e.g. John Doe" readonly style="opacity:0.7; cursor:not-allowed;">
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="jobCategory">
+                                <option value="Video">Video Editing</option>
+                                <option value="Photo">Photo Retouching</option>
+                                <option value="Audio">Audio Design</option>
+                                <option value="VFX">VFX & 3D</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Starting Price (₹)</label>
+                            <input type="number" id="jobPrice" placeholder="50" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Experience</label>
+                            <input type="text" id="jobExperience" placeholder="e.g. 5 Years" required>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Primary Skills (General, comma separated)</label>
+                            <input type="text" id="jobSkills" placeholder="e.g. Color Grading, Sound Mixing, Motion Graphics" required>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Software / Tools (comma separated)</label>
+                            <input type="text" id="jobTools" placeholder="e.g. Premiere Pro, CapCut, DaVinci Resolve">
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Bio</label>
+                            <textarea id="jobBio" rows="3" placeholder="Professional editor..." required></textarea>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Video Clip Links (comma separated YouTube/Drive links)</label>
+                            <textarea id="jobVideoClips" rows="2" placeholder="https://youtube.com/watch?v=..., https://drive.google.com/..."></textarea>
+                        </div>
+                        <div class="form-group full-width p-3" style="background: rgba(255,255,255,0.02); border-radius: 8px;">
+                            <label>Profile Avatar</label>
+                            <p class="text-sm text-secondary mb-3">By default, this imports your user profile image. You can override it here.</p>
+                            <div class="upload-wrapper" style="border:none;">
+                                <img id="jobAvatarPreview" src="https://via.placeholder.com/80" class="preview-img mb-2" style="width:80px; height:80px; object-fit:cover; border-radius:50%; border: 2px solid var(--primary);">
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <input type="file" id="jobAvatarUpload" accept="image/*" style="display:none;">
+                                    <button class="btn secondary btn-sm" onclick="document.getElementById('jobAvatarUpload').click()">Upload Custom Photo</button>
+                                </div>
+                                <input type="hidden" id="jobAvatarUrl">
+                            </div>
+                        </div>
+
+                        <div class="form-group full-width p-3" style="background: rgba(255,255,255,0.02); border-radius: 8px;">
+                            <label>Profile Banner (Required)</label>
+                            <p class="text-sm text-secondary mb-3">Upload a high-quality wide image.</p>
+                            <div class="upload-wrapper" style="border:none;">
+                                <img id="jobBannerPreview" src="" class="preview-img wide-preview mb-2" style="display:none; width:100%; height:100px; object-fit:cover; border-radius:8px;">
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <input type="file" id="jobBannerUpload" accept="image/*" style="display:none;">
+                                    <button class="btn secondary btn-sm" onclick="document.getElementById('jobBannerUpload').click()">Upload Banner</button>
+                                </div>
+                                <input type="hidden" id="jobBannerUrl">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Portfolio Link</label>
+                            <input type="url" id="jobPortfolio" placeholder="https://dribbble.com/your-profile">
+                        </div>
+                    </div>
+                    <button id="submitJobReqBtn" class="btn primary w-100 mt-4">Submit Application</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+    </div> <!-- END MAIN APP -->
+
+    <!-- Editor Profile Modal -->
+    <div class="modal-overlay" id="editorProfileModal" style="display: none;">
+        <div class="modal-card large-modal">
+            <div class="modal-header border-0 pb-0" style="padding-bottom: 0; position: absolute; z-index: 100; right: 0;">
+                <span class="close" id="closeProfileModal" style="z-index: 10; color: white; background: rgba(0,0,0,0.5); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; margin: 10px;">&times;</span>
+            </div>
+            <div class="modal-body p-0">
+                <div class="profile-banner-container" style="width: 100%; height: 200px; overflow: hidden; position: relative;">
+                    <img id="epBanner" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                    <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to top, var(--glass-bg), transparent);"></div>
+                </div>
+                <div class="naukri-layout" style="margin-top: -60px; position: relative; z-index: 10;">
+                    <!-- Left Sidebar -->
+                    <div class="naukri-left" style="background: transparent; border-right: none; padding-top: 0;">
+                        <img id="epAvatar" src="" class="profile-avatar-large" style="border: 4px solid var(--glass-bg); box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                        <h2 id="epName" class="text-xl font-bold mb-1 mt-2" style="font-size:1.5rem;">Name</h2>
+                        <span id="epVerified" class="verified-badge hidden mb-1" title="Verified Editor">✓ Verified</span>
+                        <span id="epCategory" class="category-tag mb-3">Category</span>
+                        
+                        <div class="profile-stats-list">
+                            <p>⭐ <strong id="epRating"></strong></p>
+                            <p>💬 <strong id="epReviewsCount"></strong> Reviews</p>
+                            <p>💼 <strong id="epProjects"></strong> Projects</p>
+                            <p>💰 From <strong>₹<span id="epPrice"></span></strong></p>
+                            <p>⏳ <strong id="epAvailability"></strong></p>
+                        </div>
+                        
+                        <button class="btn primary w-100 btn-large mt-auto" id="contactEditorBtn">Hire / Contact</button>
+                    </div>
+                    
+                    <!-- Right Main Content -->
+                    <div class="naukri-right">
+                        <div class="profile-section">
+                            <h3>Professional Summary</h3>
+                            <p id="epBio" class="bio-text"></p>
+                        </div>
+                        
+                        <div class="profile-section">
+                            <h3>Skills & Tools</h3>
+                            <p class="text-sm text-secondary mb-2">Primary Skills</p>
+                            <div class="skills-list mb-3" id="epSkills"></div>
+                            
+                            <p class="text-sm text-secondary mb-2">Software / Tools</p>
+                            <div class="skills-list" id="epTools"></div>
+                        </div>
+                        
+                        <div class="profile-section">
+                            <h3>Experience</h3>
+                            <p id="epExperience"></p>
+                        </div>
+                        
+                        <div class="profile-section">
+                            <h3>Portfolio & Work Samples</h3>
+                            <div id="epPortfolio" class="mb-3 portfolio-links"></div>
+                            <div id="epVideoClips"></div>
+                        </div>
+                        
+                        <div class="profile-section">
+                            <h3>Client Reviews</h3>
+                            <div id="epReviewsList" class="reviews-list mt-3"></div>
+                        </div>
+
+                        <div class="text-center mt-6 mobile-only" style="margin-bottom: 20px;">
+                            <button class="btn secondary w-100" id="closeProfileBtnMobile">Go Back</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Prompt Modal -->
+    <div class="modal-overlay" id="loginPromptModal" style="display: none;">
+        <div class="modal-card small-modal">
+            <div class="modal-header">
+                <h3>Sign In Required</h3>
+                <span class="close" id="closeLoginPrompt">&times;</span>
+            </div>
+            <div class="modal-body text-center">
+                <p>You must be signed in to hire or contact editors.</p>
+                <div style="margin-top: 1.5rem;">
+                    <button class="btn primary btn-large w-100 disabled" id="signInGoogleBtn" disabled style="opacity: 0.7; cursor: not-allowed;">
+                        Sign in with Google (Coming Soon)
+                    </button>
+                    <p style="margin-top: 10px; font-size: 0.9rem; color: var(--text-secondary);">Please reload to log in via email at the home screen.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Modal (Legacy, maybe repurpose for Message later) -->
+    <div class="modal-overlay" id="contactModal" style="display: none;">
+        <div class="modal-card small-modal">
+            <div class="modal-header">
+                <h3>Contact Editor</h3>
+                <span class="close" id="closeContactModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>You can reach out to this editor directly to discuss your project.</p>
+                <div class="contact-links mt-4 text-center">
+                    <a id="contactEmail" href="#" class="btn secondary w-100 mb-2">📧 Send Email</a>
+                    <a id="contactWhatsapp" href="#" class="btn primary w-100" target="_blank">💬 WhatsApp</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Profile Modal -->
+    <div class="modal-overlay" id="userProfileModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="userProfileTitle">My Profile</h3>
+                <span class="close" id="closeUserProfile">&times;</span>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <p id="profileCompleteMsg" class="text-secondary mb-3 hidden">Please complete your profile before hiring editors.</p>
+                <div class="form-group text-center">
+                    <img id="upAvatarPreview" src="https://via.placeholder.com/80" style="width:80px; height:80px; border-radius:50%; object-fit:cover; margin-bottom:10px; border:2px solid var(--primary);">
+                    <input type="file" id="upAvatarUpload" accept="image/*" style="display:none;">
+                    <br>
+                    <button class="btn secondary btn-sm" onclick="document.getElementById('upAvatarUpload').click()">Upload Photo (Optional)</button>
+                    <input type="hidden" id="upAvatarUrl">
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <div class="form-group flex-1">
+                        <label>First Name</label>
+                        <input type="text" id="upFirstName" placeholder="John" required>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label>Last Name</label>
+                        <input type="text" id="upLastName" placeholder="Doe" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Contact Number</label>
+                    <input type="tel" id="upPhone" placeholder="+91 9876543210" required>
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="upEmail" readonly style="opacity:0.7; cursor:not-allowed;">
+                </div>
+                <button class="btn primary w-100" id="saveUserProfileBtn">Save Profile</button>
+                
+                <hr style="margin:20px 0; border:1px solid var(--glass-border);">
+                
+                <h3>My Requests</h3>
+                <div id="userRequestsList" class="mt-3">
+                    <p class="text-secondary text-sm">Loading requests...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div class="modal-overlay" id="reviewModal" style="display: none;">
+        <div class="modal-card small-modal">
+            <div class="modal-header">
+                <h3>Write a Review</h3>
+                <span class="close" id="closeReviewModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group text-center">
+                    <p class="mb-2">How was your experience?</p>
+                    <div id="reviewStars" class="mb-3" style="font-size: 2rem; cursor: pointer;">
+                        <span data-val="1">☆</span><span data-val="2">☆</span><span data-val="3">☆</span><span data-val="4">☆</span><span data-val="5">☆</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Your Feedback</label>
+                    <textarea id="reviewText" rows="3" placeholder="Great editor..."></textarea>
+                </div>
+                <button id="submitReviewBtn" class="btn primary w-100">Submit Review</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Requests Modal -->
+    <div class="modal-overlay" id="adminRequestsModal" style="display: none;">
+        <div class="modal-card large-modal">
+            <div class="modal-header">
+                <h3>Manage Requests</h3>
+                <span class="close" id="closeAdminRequestsModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="adminRequestsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>App Settings</h3>
+                <span class="close" id="closeSettings">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Theme</label>
+                    <select id="prefTheme">
+                        <option value="system">System Default</option>
+                        <option value="light">Light Mode</option>
+                        <option value="dark">Dark Mode</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Accent Color</label>
+                    <div style="display:flex; gap:10px; margin-top:5px;">
+                        <button class="color-btn" style="background:#3b82f6; width:30px; height:30px; border-radius:50%; border:none; cursor:pointer;" data-color="#3b82f6"></button>
+                        <button class="color-btn" style="background:#ef4444; width:30px; height:30px; border-radius:50%; border:none; cursor:pointer;" data-color="#ef4444"></button>
+                        <button class="color-btn" style="background:#10b981; width:30px; height:30px; border-radius:50%; border:none; cursor:pointer;" data-color="#10b981"></button>
+                        <button class="color-btn" style="background:#8b5cf6; width:30px; height:30px; border-radius:50%; border:none; cursor:pointer;" data-color="#8b5cf6"></button>
+                        <button class="color-btn" style="background:#f59e0b; width:30px; height:30px; border-radius:50%; border:none; cursor:pointer;" data-color="#f59e0b"></button>
+                    </div>
+                </div>
+                <div class="form-group mt-3">
+                    <label>Typography</label>
+                    <select id="prefFont">
+                        <option value="sanfrancisco">Default (San Francisco)</option>
+                        <option value="inter">Inter</option>
+                        <option value="outfit">Outfit</option>
+                        <option value="playfair">Playfair Display</option>
+                    </select>
+                </div>
+                <div class="form-group mt-3" style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="margin:0;">3D & Parallax Animations</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="prefAnimations" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="form-group mt-3" style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="margin:0;">Tick-Tock Sound Effects</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="prefSounds" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <div class="about-section mt-4 text-center">
+                    <h4>Lumina Editors</h4>
+                    <p class="text-sm text-secondary">The premier marketplace for digital creators.</p>
+                    <span id="appVersionTracker" class="app-version mt-2 block" style="cursor: default; user-select: none; color: var(--text-secondary); font-size: 0.8rem; padding:10px;">App Version 1.0.0</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn primary" id="saveSettingsBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Pin Modal -->
+    <div class="modal-overlay" id="adminPinModal" style="display: none;">
+        <div class="modal-card small-modal">
+            <div class="modal-header">
+                <h3>Admin Access</h3>
+                <span class="close" id="closeAdminPin">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Enter Admin Password</label>
+                    <input type="password" id="adminPinInput" placeholder="••••••••">
+                    <p id="adminPinError" class="text-danger mt-1 hidden text-sm">Incorrect Password</p>
+                </div>
+                <button class="btn primary w-100" id="verifyPinBtn">Authenticate</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Admin Panel (Full Screen Modal) -->
+    <div class="admin-panel-overlay" id="adminPanelOverlay" style="display: none;">
+        <div class="admin-panel-container">
+            <div class="admin-navbar">
+                <div class="logo">
+                    <span>Lumina <strong>Admin</strong></span>
+                </div>
+                <button class="btn secondary" id="closeAdminPanelBtn">Exit Admin</button>
+            </div>
+            
+            <div class="admin-dashboard container" style="max-width:1200px; margin:0 auto; padding:2rem;">
+                <div class="stats-grid mb-4">
+                    <div class="stat-card glass-card" style="background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;">
+                        <h3>Total Editors</h3>
+                        <p id="statTotal" class="stat-number">0</p>
+                    </div>
+                    <div class="stat-card glass-card" style="background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;">
+                        <h3>Featured</h3>
+                        <p id="statFeatured" class="stat-number">0</p>
+                    </div>
+                    <div class="stat-card glass-card" style="background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;">
+                        <h3>Verified</h3>
+                        <p id="statVerified" class="stat-number">0</p>
+                    </div>
+                </div>
+
+                <div class="admin-header-actions mb-3" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2>Manage Editors</h2>
+                    <button class="btn primary" id="addNewEditorBtn">+ Add Editor</button>
+                </div>
+
+                <div class="table-responsive mb-4">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Photo</th>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Views</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminEditorsList"></tbody>
+                    </table>
+                </div>
+
+                <div class="admin-header-actions mb-3 mt-5" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2>Job Applications</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Photo</th>
+                                <th>User/Name</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Applied On</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminJobAppsList">
+                            <tr>
+                                <td colspan="6" class="text-center text-secondary text-sm">No new applications.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Editor Modal (Admin) -->
+    <div class="modal-overlay" id="editorFormModal" style="display: none;">
+        <div class="modal-card large-modal">
+            <div class="modal-header">
+                <h3 id="editorFormTitle">Add New Editor</h3>
+                <span class="close" id="closeEditorForm">&times;</span>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <input type="hidden" id="editEditorId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="edName" placeholder="e.g. John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="edCategory">
+                            <option value="Video">Video Editing</option>
+                            <option value="Photo">Photo Retouching</option>
+                            <option value="Audio">Audio Design</option>
+                            <option value="VFX">VFX & 3D</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Starting Price (₹)</label>
+                        <input type="number" id="edPrice" placeholder="50" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Experience</label>
+                        <input type="text" id="edExperience" placeholder="e.g. 5 Years" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Primary Skills (General, comma separated)</label>
+                        <input type="text" id="edSkills" placeholder="e.g. Color Grading, Sound Mixing, Motion Graphics" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Software / Tools (comma separated)</label>
+                        <input type="text" id="edTools" placeholder="e.g. Premiere Pro, CapCut, DaVinci Resolve">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Bio</label>
+                        <textarea id="edBio" rows="3" placeholder="Professional editor..." required></textarea>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Video Clip Links (comma separated YouTube/Drive links)</label>
+                        <textarea id="edVideoClips" rows="2" placeholder="https://youtube.com/watch?v=..., https://drive.google.com/..."></textarea>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label>Profile Avatar</label>
+                        <div class="upload-wrapper p-3" style="border:1px solid var(--glass-border); border-radius:8px;">
+                            <img id="edAvatarPreview" src="" class="preview-img small-preview mb-2" style="display:none; width:80px; height:80px; object-fit:cover; border-radius:50%;">
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <input type="url" id="edAvatarUrl" placeholder="Image URL OR Upload" style="flex:1;">
+                                <input type="file" id="edAvatarUpload" accept="image/*" style="display:none;">
+                                <button class="btn secondary" onclick="document.getElementById('edAvatarUpload').click()" id="edAvatarBtn">Browse</button>
+                            </div>
+                            <div id="edAvatarProgressContainer" style="display:none; margin-top:10px;">
+                                <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px; color:var(--text-secondary);">
+                                    <span>Uploading...</span><span id="edAvatarProgressText">0%</span>
+                                </div>
+                                <div style="width:100%; height:6px; background:rgba(0,0,0,0.1); border-radius:3px; overflow:hidden;">
+                                    <div id="edAvatarProgressBar" style="width:0%; height:100%; background:var(--primary); transition:width 0.2s;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Profile Banner</label>
+                        <div class="upload-wrapper p-3" style="border:1px solid var(--glass-border); border-radius:8px;">
+                            <img id="edBannerPreview" src="" class="preview-img wide-preview mb-2" style="display:none; width:100%; height:100px; object-fit:cover; border-radius:8px;">
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <input type="url" id="edBannerUrl" placeholder="Image URL OR Upload" style="flex:1;">
+                                <input type="file" id="edBannerUpload" accept="image/*" style="display:none;">
+                                <button class="btn secondary" onclick="document.getElementById('edBannerUpload').click()" id="edBannerBtn">Browse</button>
+                            </div>
+                            <div id="edBannerProgressContainer" style="display:none; margin-top:10px;">
+                                <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px; color:var(--text-secondary);">
+                                    <span>Uploading...</span><span id="edBannerProgressText">0%</span>
+                                </div>
+                                <div style="width:100%; height:6px; background:rgba(0,0,0,0.1); border-radius:3px; overflow:hidden;">
+                                    <div id="edBannerProgressBar" style="width:0%; height:100%; background:var(--primary); transition:width 0.2s;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Availability</label>
+                        <select id="edAvailability">
+                            <option value="Available">Available Now</option>
+                            <option value="Busy">Busy</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Completed Projects</label>
+                        <input type="number" id="edProjects" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Email Contact</label>
+                        <input type="email" id="edEmail" placeholder="editor@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>WhatsApp Number</label>
+                        <input type="text" id="edWhatsapp" placeholder="e.g. +1234567890">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Portfolio Link</label>
+                        <input type="url" id="edPortfolio" placeholder="https://behance.net/johndoe">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <div>
+                    <label class="checkbox-label" style="margin-right: 15px; cursor:pointer;">
+                        <input type="checkbox" id="edIsFeatured"> Featured
+                    </label>
+                    <label class="checkbox-label" style="cursor:pointer;">
+                        <input type="checkbox" id="edIsVerified"> Verified badge
+                    </label>
+                </div>
+                <div>
+                    <button class="btn secondary" id="closeEditorFormBtn">Cancel</button>
+                    <button class="btn primary" id="saveEditorBtn">Save Editor</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
