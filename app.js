@@ -407,6 +407,32 @@ function populateJobFormFromProfile() {
     }
     const up = allUsers[currentUser.uid] || {};
     
+    // Check if user is already an editor
+    const isAlreadyEditor = editors.find(e => e.userId === currentUser.uid);
+    if(isAlreadyEditor) {
+        document.getElementById('jobsCompleteProfileMsg').classList.remove('hidden');
+        document.getElementById('jobsCompleteProfileMsg').innerHTML = `<p class="text-danger text-center">You already have an active job profile.</p>`;
+        document.getElementById('submitJobReqBtn').disabled = true;
+        
+        // Disable form fields
+        ['jobName', 'jobEmail', 'jobPhone', 'jobCategory', 'jobStyle', 'jobPrice', 'jobMaxPrice', 'jobExperience', 'jobSkills', 'jobTools', 'jobBio', 'jobVideoClips', 'jobPortfolio'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.disabled = true;
+        });
+        const urlEl = document.getElementById('jobBannerUrl');
+        if(urlEl) urlEl.disabled = true;
+        return;
+    } else {
+        document.getElementById('jobsCompleteProfileMsg').innerHTML = `<p class="text-danger">Please <button class="btn btn-sm primary" onclick="window.openUserProfileModal(true)">Complete Profile</button> first. It's required for applying.</p>`;
+        // Enable form fields just in case
+        ['jobName', 'jobEmail', 'jobPhone', 'jobCategory', 'jobStyle', 'jobPrice', 'jobMaxPrice', 'jobExperience', 'jobSkills', 'jobTools', 'jobBio', 'jobVideoClips', 'jobPortfolio'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.disabled = false;
+        });
+        const urlEl = document.getElementById('jobBannerUrl');
+        if(urlEl) urlEl.disabled = false;
+    }
+
     document.getElementById('jobsCompleteProfileMsg').classList.add('hidden');
     document.getElementById('submitJobReqBtn').disabled = false;
     document.getElementById('jobName').value = up.firstName ? (up.firstName + ' ' + (up.lastName||'').trim()) : '';
@@ -1016,12 +1042,28 @@ window.openUserProfileModal = function(showMustComplete = false) {
     document.getElementById('upAvatarUrl').value = up.photoUrl || '';
     document.getElementById('upAvatarPreview').src = up.photoUrl || currentUser.photoURL || 'https://via.placeholder.com/80';
     
+    // Set up Short ID
+    if(document.getElementById('userShortId')) {
+        document.getElementById('userShortId').textContent = 'ID: ' + currentUser.uid.substring(0, 8).toUpperCase();
+    }
+
     if(showMustComplete) {
         profileCompleteMsg.classList.remove('hidden');
     } else {
         profileCompleteMsg.classList.add('hidden');
     }
     
+    // Job Profile Section
+    const jobProfileSection = document.getElementById('jobProfileSection');
+    if (jobProfileSection) {
+        const myEditorProfile = editors.find(e => e.userId === currentUser.uid);
+        if (myEditorProfile) {
+            jobProfileSection.style.display = 'block';
+        } else {
+            jobProfileSection.style.display = 'none';
+        }
+    }
+
     renderUserRequestsList();
     renderUserApplicationsList();
     userProfileModal.style.display = 'flex';
@@ -1613,13 +1655,26 @@ window.viewAdminUserProfile = function(uid) {
     document.getElementById('adminUpName').textContent = u.firstName ? (u.firstName + ' ' + (u.lastName || '')).trim() : 'Anonymous User';
     document.getElementById('adminUpEmail').textContent = u.email || 'No email';
     document.getElementById('adminUpPhone').textContent = u.phone || 'No phone';
-    document.getElementById('adminUpId').textContent = 'UID: ' + uid;
+    document.getElementById('adminUpId').textContent = 'UID: ' + uid + ' (Short: ' + uid.substring(0,8).toUpperCase() + ')';
     document.getElementById('adminUserProfileModal').style.display = 'flex';
 };
 
 if (document.getElementById('closeAdminUserProfile')) {
     document.getElementById('closeAdminUserProfile').addEventListener('click', () => {
         document.getElementById('adminUserProfileModal').style.display = 'none';
+    });
+}
+
+if (document.getElementById('adminIdCheckerBtn')) {
+    document.getElementById('adminIdCheckerBtn').addEventListener('click', () => {
+        const inputVal = document.getElementById('adminIdCheckerInput').value.trim().toUpperCase();
+        if(!inputVal) return;
+        const uid = Object.keys(allUsers).find(k => k.substring(0,8).toUpperCase() === inputVal);
+        if(uid) {
+            window.viewAdminUserProfile(uid);
+        } else {
+            alert('No user found with that ID.');
+        }
     });
 }
 
@@ -2120,8 +2175,189 @@ if(submitJobReqBtn) {
 }
 
 // -------------------------------------------------------------
-// CUSTOMER SUPPORT CHAT SYSTEM
+// IN-APP MESSAGING & JOB DASHBOARD
 // -------------------------------------------------------------
+const contactInApp = document.getElementById('contactInApp');
+const editorClientChatModal = document.getElementById('editorClientChatModal');
+const closeEccChat = document.getElementById('closeEccChat');
+const eccChatContainer = document.getElementById('eccChatContainer');
+const eccChatInput = document.getElementById('eccChatInput');
+const sendEccMsgBtn = document.getElementById('sendEccMsgBtn');
+let currentEccPath = null;
+let eccListener = null;
+
+if (contactInApp) {
+    contactInApp.addEventListener('click', () => {
+        if (!currentUser) {
+            loginPromptModal.style.display = 'flex';
+            return;
+        }
+        if (!currentProfileId) return;
+        document.getElementById('contactModal').style.display = 'none';
+        editorClientChatModal.style.display = 'flex';
+        
+        currentEccPath = `editor_client_chats/${currentProfileId}_${currentUser.uid}/messages`;
+        
+        const ed = editors.find(e => e.id === currentProfileId);
+        document.getElementById('eccUserName').textContent = 'Chat with ' + (ed ? ed.name : 'Editor');
+        
+        if (eccListener) eccListener(); // Unsubscribe prev
+        
+        eccListener = onValue(ref(db, currentEccPath), (snap) => {
+            const data = snap.val() || {};
+            const messages = Object.keys(data).map(k => ({id: k, ...data[k]})).sort((a,b) => a.timestamp - b.timestamp);
+            renderEccChat(messages);
+        });
+    });
+}
+
+if (closeEccChat) {
+    closeEccChat.addEventListener('click', () => {
+        editorClientChatModal.style.display = 'none';
+        if (eccListener) {
+            // Can't directly unsubscribe with onValue in this exact syntax easily without keeping the ref exactly, but onValue returns the unsubscribe function in newer SDKs! Wait, we use 10.9.0 which returns the unsubscribe function.
+            eccListener();
+            eccListener = null;
+        }
+    });
+}
+
+if (sendEccMsgBtn && eccChatInput) {
+    const sendEccMsg = async () => {
+        const text = eccChatInput.value.trim();
+        if (!text || !currentEccPath || !currentUser) return;
+        eccChatInput.value = '';
+        
+        try {
+            await push(ref(db, currentEccPath), {
+                senderId: currentUser.uid,
+                text: text,
+                timestamp: Date.now()
+            });
+        } catch (e) {
+            console.error("Chat error", e);
+        }
+    };
+    sendEccMsgBtn.addEventListener('click', sendEccMsg);
+    eccChatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendEccMsg();
+    });
+}
+
+function renderEccChat(messages) {
+    if (!eccChatContainer) return;
+    eccChatContainer.innerHTML = '';
+    
+    if (messages.length === 0) {
+        eccChatContainer.innerHTML = '<div class="text-center text-secondary mt-3">Start the conversation...</div>';
+        return;
+    }
+    
+    messages.forEach(msg => {
+        const isMe = msg.senderId === currentUser.uid;
+        const div = document.createElement('div');
+        div.style.maxWidth = '80%';
+        div.style.padding = '10px 15px';
+        div.style.borderRadius = '12px';
+        div.style.marginBottom = '5px';
+        div.style.wordBreak = 'break-word';
+        if (isMe) {
+            div.style.alignSelf = 'flex-end';
+            div.style.background = 'var(--primary)';
+            div.style.color = 'white';
+        } else {
+            div.style.alignSelf = 'flex-start';
+            div.style.background = 'rgba(255,255,255,0.1)';
+            div.style.color = 'white';
+        }
+        
+        div.innerHTML = `
+            <div style="font-size:0.95rem;">${msg.text}</div>
+            <div style="font-size:0.7rem; color:rgba(255,255,255,0.6); margin-top:5px; text-align: ${isMe ? 'right' : 'left'}">
+                ${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            </div>
+        `;
+        eccChatContainer.appendChild(div);
+    });
+    eccChatContainer.scrollTop = eccChatContainer.scrollHeight;
+}
+
+// Job Dashboard Logic
+const jobDashboardModal = document.getElementById('jobDashboardModal');
+const openJobProfileBtn = document.getElementById('openJobProfileBtn');
+const closeJobDashboard = document.getElementById('closeJobDashboard');
+const jobDashboardClientsList = document.getElementById('jobDashboardClientsList');
+
+if (openJobProfileBtn) {
+    openJobProfileBtn.addEventListener('click', () => {
+        document.getElementById('userProfileModal').style.display = 'none';
+        jobDashboardModal.style.display = 'flex';
+        renderJobDashboard();
+    });
+}
+
+if (closeJobDashboard) {
+    closeJobDashboard.addEventListener('click', () => {
+        jobDashboardModal.style.display = 'none';
+    });
+}
+
+function renderJobDashboard() {
+    if (!currentUser) return;
+    const myEditorProfile = editors.find(e => e.userId === currentUser.uid);
+    if (!myEditorProfile) return;
+    
+    // Find unique clients from requests
+    const myRequests = allRequests.filter(r => r.editorId === myEditorProfile.id);
+    const uniqueClientIds = [...new Set(myRequests.map(r => r.userId))];
+    
+    if (uniqueClientIds.length === 0) {
+        jobDashboardClientsList.innerHTML = '<div class="text-center text-secondary w-100" style="grid-column: 1/-1;">You do not have any clients yet.</div>';
+        return;
+    }
+    
+    jobDashboardClientsList.innerHTML = '';
+    uniqueClientIds.forEach(clientId => {
+        const u = allUsers[clientId] || {};
+        const name = u.firstName ? (u.firstName + ' ' + (u.lastName || '')).trim() : 'Anonymous';
+        const photo = u.photoUrl || 'https://via.placeholder.com/60';
+        
+        const div = document.createElement('div');
+        div.className = 'glass-card p-3';
+        div.style.background = 'rgba(255,255,255,0.02)';
+        div.style.border = '1px solid var(--glass-border)';
+        div.style.borderRadius = '12px';
+        div.style.display = 'flex';
+        div.style.flexDirection = 'column';
+        div.style.alignItems = 'center';
+        div.style.textAlign = 'center';
+        
+        div.innerHTML = `
+            <img src="${photo}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; margin-bottom:10px;">
+            <h4 style="margin:0 0 5px;">${name}</h4>
+            <p style="font-size:0.8rem; color:var(--text-secondary); margin:0 0 10px; word-break:break-all;">${u.email || 'No email'}</p>
+            <button class="btn secondary btn-sm w-100 mt-auto msg-client-btn">💬 Message</button>
+        `;
+        
+        div.querySelector('.msg-client-btn').addEventListener('click', () => {
+            jobDashboardModal.style.display = 'none';
+            editorClientChatModal.style.display = 'flex';
+            
+            currentEccPath = `editor_client_chats/${myEditorProfile.id}_${clientId}/messages`;
+            document.getElementById('eccUserName').textContent = 'Chat with ' + name;
+            
+            if (eccListener) eccListener(); // Unsubscribe prev
+            
+            eccListener = onValue(ref(db, currentEccPath), (snap) => {
+                const data = snap.val() || {};
+                const messages = Object.keys(data).map(k => ({id: k, ...data[k]})).sort((a,b) => a.timestamp - b.timestamp);
+                renderEccChat(messages);
+            });
+        });
+        
+        jobDashboardClientsList.appendChild(div);
+    });
+}
 const supportChatModal = document.getElementById('supportChatModal');
 const closeSupportChatBtn = document.getElementById('closeSupportChat');
 const supportBtn = document.getElementById('supportBtn');
