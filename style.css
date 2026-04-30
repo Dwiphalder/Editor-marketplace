@@ -268,12 +268,46 @@ input:checked + .slider:before { transform: translateX(20px); }
     gap: 20px; margin-top: 1.5rem;
 }
 
+.horizontal-scroll-container {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 15px;
+    padding-bottom: 10px;
+    margin-top: 1.5rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
+.horizontal-scroll-container::-webkit-scrollbar {
+    height: 6px;
+}
+.horizontal-scroll-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05); 
+    border-radius: 4px;
+}
+.horizontal-scroll-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2); 
+    border-radius: 4px;
+}
+
+.horizontal-scroll-container > * {
+    flex: 0 0 calc(33.333% - 10px);
+    scroll-snap-align: start;
+}
+
 /* Responsive Grid Adjustments */
 @media (max-width: 900px) {
     .editors-grid { grid-template-columns: repeat(2, 1fr); gap: 15px; }
+    .horizontal-scroll-container > * {
+        flex: 0 0 calc(50% - 10px);
+    }
 }
 @media (max-width: 600px) {
-    .editors-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .editors-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } /* Changed to 2 columns on mobile so it's not squished */
+    .horizontal-scroll-container > * {
+        flex: 0 0 calc(65%);
+    }
     .ec-name { font-size: 0.9rem; }
     .ec-avatar-container { width: 50px; height: 50px; margin: -25px auto 0; padding: 2px; }
     .ec-stats { flex-direction: column; gap: 4px; font-size: 0.75rem; align-items: center; margin-top: 6px; }
@@ -510,7 +544,20 @@ input:checked + .slider:before { transform: translateX(20px); }
 /* Admin Panel */
 .admin-panel-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: var(--bg-color); z-index: 2000; overflow-y: auto;
+    background: var(--bg-color); z-index: 2000; overflow-y: hidden;
+}
+.admin-tab-btn {
+    transition: all 0.2s;
+    font-weight: 500;
+}
+.admin-tab-btn:hover {
+    background: rgba(255,255,255,0.05) !important;
+}
+.admin-tab-btn.active {
+    background: rgba(255,255,255,0.1) !important;
+    border-left: 3px solid var(--primary) !important;
+    color: var(--primary) !important;
+    border-radius: 0 8px 8px 0;
 }
 .admin-navbar { padding: 1rem 2rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; background: var(--glass-bg); }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
@@ -532,4 +579,77 @@ input:checked + .slider:before { transform: translateX(20px); }
     .form-grid { grid-template-columns: 1fr; }
     .profile-split { grid-template-columns: 1fr; }
     .admin-navbar { padding: 1rem; }
+    .editor-row-card {
+        flex-direction: column;
+        text-align: center !important;
+        align-items: center !important;
+    }
+    .editor-row-card img {
+        width: 80px !important;
+        height: 80px !important;
+    }
+    .editor-row-card .btn {
+        width: 100%;
+    }
+    .editor-row-card > div:last-child {
+        width: 100%;
+        flex-direction: row !important;
+    }
+    
+    /* Admin Panel Mobile Adjustments */
+    .admin-layout {
+        flex-direction: column !important;
+    }
+    .admin-sidebar {
+        width: 100% !important;
+        height: auto !important;
+        border-right: none !important;
+        border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+    }
+    .admin-sidebar nav {
+        display: flex !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        white-space: nowrap !important;
+        padding-bottom: 10px !important;
+        gap: 10px;
+    }
+    .admin-sidebar nav::-webkit-scrollbar {
+        height: 4px;
+    }
+    .admin-sidebar nav::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.2);
+        border-radius: 4px;
+    }
+    .admin-tab-btn {
+        flex-shrink: 0 !important;
+        justify-content: center !important;
+        padding: 8px 12px !important;
+        font-size: 0.9rem;
+    }
+    .admin-main-content {
+        padding: 15px !important;
+    }
+    
+    .table-responsive {
+        border-radius: 8px !important;
+    }
+    .admin-table th, .admin-table td {
+        padding: 10px !important;
+        font-size: 0.85rem;
+    }
+    .glass-card {
+        padding: 15px !important;
+    }
+    
+    .admin-tab-content > div[style*="justify-content: space-between"] {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 15px;
+    }
+    
+    .admin-tab-content > div[style*="justify-content: space-between"] > div {
+        width: 100%;
+        flex-wrap: wrap;
+    }
 }

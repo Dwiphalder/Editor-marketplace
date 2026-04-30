@@ -170,6 +170,19 @@ if (toggleFiltersBtn && filterContainer) {
     });
 }
 
+const toggleFiltersBtnResults = document.getElementById('toggleFiltersBtnResults');
+const filterContainerResults = document.getElementById('filterContainerResults');
+
+if (toggleFiltersBtnResults && filterContainerResults) {
+    toggleFiltersBtnResults.addEventListener('click', () => {
+        if (filterContainerResults.style.display === 'none') {
+            filterContainerResults.style.display = 'block';
+        } else {
+            filterContainerResults.style.display = 'none';
+        }
+    });
+}
+
 // DOM Elements - Modals
 const profileModal = document.getElementById('editorProfileModal');
 const contactModal = document.getElementById('contactModal');
@@ -181,7 +194,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // Authentication AuthState
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     const authScreen = document.getElementById('authScreen');
     const mainApp = document.getElementById('mainApp');
     const welcomeScreen = document.getElementById('welcomeScreen');
@@ -189,13 +202,40 @@ onAuthStateChanged(auth, (user) => {
     
     if (user) {
         currentUser = user;
+        
+        window.currentUserIsAdmin = false;
+        try {
+            const userEmail = (user.email || '').toLowerCase();
+            if (userEmail === 'dwiphalder49@gmail.com' || userEmail === 'dwiphalder608@gmail.com') {
+                window.currentUserIsAdmin = true;
+            }
+            const adminSnap = await get(ref(db, "admins"));
+            if (adminSnap.exists()) {
+                const admins = adminSnap.val();
+                const matchedAdmin = Object.values(admins).find(a => 
+                    ((a.email || '').toLowerCase() === userEmail || a.uid === user.uid)
+                );
+                
+                if (matchedAdmin) {
+                    if (!matchedAdmin.isDisabled) {
+                        window.currentUserIsAdmin = true;
+                    } else {
+                        window.currentUserIsAdmin = false;
+                        // If hardcoded matched but is disabled in db, it gets disabled.
+                    }
+                }
+            }
+        } catch(e) {
+            console.error("Failed to check admin status", e);
+        }
+
         authScreen.style.opacity = '0';
         authScreen.style.visibility = 'hidden';
         
         setTimeout(() => {
             authScreen.style.display = 'none';
             
-            if (user.email === 'dwiphalder49@gmail.com' || user.email === 'dwiphalder608@gmail.com') {
+            if (window.currentUserIsAdmin) {
                 // Admin bypass
                 mainApp.style.display = 'none';
                 welcomeScreen.style.display = 'none';
@@ -362,6 +402,7 @@ window.switchNavView = function(view) {
         if(homeView) homeView.style.display = 'block';
         if(jobsView) jobsView.style.display = 'none';
         if(wishlistView) wishlistView.style.display = 'none';
+        if(document.getElementById('searchResultsView')) document.getElementById('searchResultsView').style.display = 'none';
         if(bottomNavHome) bottomNavHome.classList.add('active');
         if(bottomNavJobs) bottomNavJobs.classList.remove('active');
         if(bottomNavWishlist) bottomNavWishlist.classList.remove('active');
@@ -369,6 +410,7 @@ window.switchNavView = function(view) {
         if(homeView) homeView.style.display = 'none';
         if(jobsView) jobsView.style.display = 'block';
         if(wishlistView) wishlistView.style.display = 'none';
+        if(document.getElementById('searchResultsView')) document.getElementById('searchResultsView').style.display = 'none';
         if(bottomNavJobs) bottomNavJobs.classList.add('active');
         if(bottomNavHome) bottomNavHome.classList.remove('active');
         if(bottomNavWishlist) bottomNavWishlist.classList.remove('active');
@@ -377,11 +419,21 @@ window.switchNavView = function(view) {
         if(homeView) homeView.style.display = 'none';
         if(jobsView) jobsView.style.display = 'none';
         if(wishlistView) wishlistView.style.display = 'block';
+        if(document.getElementById('searchResultsView')) document.getElementById('searchResultsView').style.display = 'none';
         if(bottomNavWishlist) bottomNavWishlist.classList.add('active');
         if(bottomNavHome) bottomNavHome.classList.remove('active');
         if(bottomNavJobs) bottomNavJobs.classList.remove('active');
         renderWishlist();
+    } else if(view === 'searchResults') {
+        if(homeView) homeView.style.display = 'none';
+        if(jobsView) jobsView.style.display = 'none';
+        if(wishlistView) wishlistView.style.display = 'none';
+        if(document.getElementById('searchResultsView')) document.getElementById('searchResultsView').style.display = 'block';
+        if(bottomNavWishlist) bottomNavWishlist.classList.remove('active');
+        if(bottomNavHome) bottomNavHome.classList.remove('active');
+        if(bottomNavJobs) bottomNavJobs.classList.remove('active');
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
 if(bottomNavHome && bottomNavJobs && bottomNavWishlist) {
@@ -450,9 +502,9 @@ function populateJobFormFromProfile() {
 
 // Fetch Data
 async function fetchEditors() {
-    loadingMain.style.display = 'block';
-    emptyMain.style.display = 'none';
-    mainGrid.innerHTML = '';
+    if(loadingMain) loadingMain.style.display = 'block';
+    if(emptyMain) emptyMain.style.display = 'none';
+    if(mainGrid) mainGrid.innerHTML = '';
     
     try {
         const [editorsSnap, requestsSnap, reviewsSnap, usersSnap, appsSnap] = await Promise.all([
@@ -500,12 +552,20 @@ async function fetchEditors() {
         }
         
         renderTrending();
-        filterAndRenderEditors();
+        refreshCurrentFeeds();
         renderWishlist();
         renderAdminList(); // Refresh admin list if it's open
     } catch (error) {
         console.error("Fetch error:", error);
-        loadingMain.innerHTML = '<p class="text-danger">Failed to load data. Check DB connection.</p>';
+        if(loadingMain) loadingMain.innerHTML = '<p class="text-danger">Failed to load data. Check DB connection.</p>';
+    }
+}
+
+function refreshCurrentFeeds() {
+    if (document.getElementById('searchResultsView') && document.getElementById('searchResultsView').style.display === 'block') {
+        processSearch();
+    } else {
+        renderHomeFeeds();
     }
 }
 
@@ -609,21 +669,15 @@ function renderTrending() {
     }
 }
 
-function filterAndRenderEditors() {
-    const term = (searchInput && searchInput.value ? searchInput.value : '').toLowerCase();
-    loadingMain.style.display = 'none';
-    
+function renderHomeFeeds() {
+    if(loadingMain) loadingMain.style.display = 'none';
     const filterRating = document.getElementById('filterRating') ? document.getElementById('filterRating').value : 'All';
     const filterType = document.getElementById('filterType') ? document.getElementById('filterType').value : 'All';
     const sortPrice = document.getElementById('sortPrice') ? document.getElementById('sortPrice').value : 'None';
 
-    let filtered = editors.filter(ed => {
+    let baseFiltered = editors.filter(ed => {
         if (ed.deletionScheduledAt) return false;
-
-        const safeName = (ed.name || '').toString().toLowerCase();
-        const safeSkills = (ed.skills || '').toString().toLowerCase();
         
-        const matchSearch = safeName.includes(term) || safeSkills.includes(term);
         const matchCat = currentCategory === 'All' ? true : ed.category === currentCategory;
         
         // Rating calculation
@@ -642,37 +696,275 @@ function filterAndRenderEditors() {
         if (filterType === 'New') matchType = editorReviews.length === 0;
         if (filterType === 'Experienced') matchType = editorReviews.length > 0;
         
-        return matchSearch && matchCat && matchRating && matchType;
+        return matchCat && matchRating && matchType;
+    }).map(ed => {
+        // compute rating once for sorting
+        const editorReviews = allReviews.filter(r => r.editorId === ed.id);
+        let avgRating = 0;
+        if (editorReviews.length > 0) {
+            avgRating = editorReviews.reduce((acc, curr) => acc + (curr.rating || 0), 0) / editorReviews.length;
+        }
+        return { ...ed, avgRating, totalReviews: editorReviews.length };
     });
 
     if (sortPrice === 'LowToHigh') {
-        filtered.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
+        baseFiltered.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
     } else if (sortPrice === 'HighToLow') {
-        filtered.sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0));
+        baseFiltered.sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0));
     }
+
+    // Check for expiration
+    const now = Date.now();
+    baseFiltered.forEach(ed => {
+        if (ed.verificationType === 'golden' && ed.goldenExpiry && now > ed.goldenExpiry) {
+            ed.verificationType = 'verified'; // Downgrade if expired
+            // Optionally update in DB, but since we re-fetch, we can just let it expire in view
+        }
+    });
+
+    // Split into categories
+    const goldenEditors = baseFiltered.filter(ed => ed.verificationType === 'golden');
+    const nonGolden = baseFiltered.filter(ed => ed.verificationType !== 'golden');
     
-    mainGrid.innerHTML = '';
+    // Sort remaining non-golden by rating for best choice but also respect a manual 'best' flag
+    const manualBest = nonGolden.filter(ed => ed.isBestEditor && (!ed.bestExpiry || now <= ed.bestExpiry));
+    const autoBest = [...nonGolden].filter(ed => !ed.isBestEditor || (ed.bestExpiry && now > ed.bestExpiry)).sort((a, b) => b.avgRating - a.avgRating).slice(0, 4 - manualBest.length);
     
-    if (filtered.length === 0) {
-        emptyMain.style.display = 'block';
+    const bestEditors = [...manualBest, ...autoBest].slice(0, 4); // max 4 best choice
+    const bestEditorIds = bestEditors.map(e => e.id);
+    
+    // For All Editors section, we display ALL filtered editors, but randomize their order
+    const allEditorsShuffled = [...baseFiltered].sort(() => Math.random() - 0.5);
+
+    // Render Golden
+    const goldenSection = document.getElementById('goldenEditorsSection');
+    const goldenGrid = document.getElementById('goldenGrid');
+    if (goldenSection && goldenGrid) {
+        if (goldenEditors.length > 0) {
+            goldenSection.style.display = 'block';
+            goldenGrid.innerHTML = goldenEditors.map((ed, i) => generateCardHTML(ed, i)).join('');
+        } else {
+            goldenSection.style.display = 'none';
+        }
+    }
+
+    // Render Best
+    const bestSection = document.getElementById('bestEditorsSection');
+    const bestGrid = document.getElementById('bestEditorsGrid');
+    if (bestSection && bestGrid) {
+        if (bestEditors.length > 0) {
+            bestSection.style.display = 'block';
+            bestGrid.innerHTML = bestEditors.map((ed, i) => generateCardHTML(ed, i)).join('');
+        } else {
+            bestSection.style.display = 'none';
+        }
+    }
+
+    // Render All Editors (Shuffled)
+    if(mainGrid) mainGrid.innerHTML = '';
+    if (allEditorsShuffled.length === 0) {
+        if(emptyMain) emptyMain.style.display = 'block';
     } else {
-        emptyMain.style.display = 'none';
-        mainGrid.innerHTML = filtered.map((ed, i) => generateCardHTML(ed, i)).join('');
+        if(emptyMain) emptyMain.style.display = 'none';
+        mainGrid.innerHTML = allEditorsShuffled.map((ed, i) => generateCardHTML(ed, i)).join('');
     }
 }
 
+function processSearch(triggeredFromResults = false) {
+    let term = '';
+    const searchInputHome = document.getElementById('searchInput');
+    const searchInputResults = document.getElementById('searchInputResults');
+    
+    if (triggeredFromResults) {
+        term = (searchInputResults ? searchInputResults.value || '' : '').toLowerCase().trim();
+        if(searchInputHome) searchInputHome.value = term;
+    } else {
+        term = (searchInputHome ? searchInputHome.value || '' : '').toLowerCase().trim();
+        if(searchInputResults) searchInputResults.value = term;
+    }
+
+    if (!term) return; // Ignore empty search
+    
+    window.switchNavView('searchResults');
+    
+    const queryLabel = document.getElementById('searchQueryLabel');
+    if(queryLabel) queryLabel.innerHTML = `Search results for: <strong>"${term}"</strong>`;
+    
+    const resultsList = document.getElementById('searchResultsList');
+    const emptySearch = document.getElementById('emptySearch');
+    
+    if (resultsList) resultsList.innerHTML = '';
+    if (emptySearch) emptySearch.style.display = 'none';
+    
+    // Use the results filters, fallback to home filters if missing
+    const filterRating = document.getElementById('filterRatingResults') ? document.getElementById('filterRatingResults').value : 'All';
+    const filterType = document.getElementById('filterTypeResults') ? document.getElementById('filterTypeResults').value : 'All';
+    const sortPrice = document.getElementById('sortPriceResults') ? document.getElementById('sortPriceResults').value : 'None';
+    
+    const minBudgetInput = document.getElementById('minBudget');
+    const maxBudgetInput = document.getElementById('maxBudget');
+    const minBudget = minBudgetInput && minBudgetInput.value ? parseFloat(minBudgetInput.value) : 0;
+    const maxBudget = maxBudgetInput && maxBudgetInput.value ? parseFloat(maxBudgetInput.value) : Infinity;
+
+    // Scoring logic for relevance
+    let searchResults = editors.map(ed => {
+        if (ed.deletionScheduledAt) return null;
+        
+        const matchCat = currentCategory === 'All' ? true : ed.category === currentCategory;
+        if (!matchCat) return null;
+
+        const safeName = (ed.name || '').toLowerCase();
+        const safeSkills = (ed.skills || '').toLowerCase() + ' ' + (ed.style || '').toLowerCase();
+        const safeBio = (ed.bio || '').toLowerCase();
+
+        let score = 0;
+        const searchTerms = term.split(/\s+/).filter(Boolean);
+        
+        searchTerms.forEach(t => {
+            if (safeName.includes(t)) score += 10;
+            if (safeSkills.includes(t)) score += 5;
+            if (safeBio.includes(t)) score += 2;
+        });
+        
+        if (safeName === term) score += 50; // Exact match bonus
+        if (safeName.includes(term)) score += 20; // Full phrase match bonus
+
+        if (score === 0) return null;
+
+        const editorReviews = allReviews.filter(r => r.editorId === ed.id);
+        let avgRating = 0;
+        if (editorReviews.length > 0) {
+            avgRating = editorReviews.reduce((acc, curr) => acc + (curr.rating || 0), 0) / editorReviews.length;
+        }
+
+        let matchRating = true;
+        if (filterRating === '4+') matchRating = avgRating >= 4.0;
+        if (filterRating === '3+') matchRating = avgRating >= 3.0;
+
+        let matchType = true;
+        if (filterType === 'New') matchType = editorReviews.length === 0;
+        if (filterType === 'Experienced') matchType = editorReviews.length > 0;
+        
+        if (!matchRating || !matchType) return null;
+        
+        const edPrice = parseFloat(ed.price) || 0;
+        if (edPrice < minBudget || edPrice > maxBudget) return null;
+
+        return { ...ed, score, avgRating };
+    }).filter(Boolean);
+
+    // Sort by relevance
+    searchResults.sort((a, b) => b.score - a.score);
+
+    if (sortPrice === 'LowToHigh') {
+        searchResults.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
+    } else if (sortPrice === 'HighToLow') {
+        searchResults.sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0));
+    }
+
+    if (searchResults.length === 0) {
+        if(emptySearch) emptySearch.style.display = 'block';
+    } else {
+        if(resultsList) resultsList.innerHTML = searchResults.map((ed, i) => generateCardHTML(ed, i)).join('');
+    }
+}
+
+function generateHorizontalCardHTML(editor) {
+    const editorReviews = allReviews.filter(r => r.editorId === editor.id);
+    let avgRating = 0;
+    if (editorReviews.length > 0) {
+        const sum = editorReviews.reduce((acc, curr) => acc + (curr.rating || 0), 0);
+        avgRating = sum / editorReviews.length;
+    }
+    const ratingText = editorReviews.length > 0 ? `⭐ ${avgRating.toFixed(1)} (${editorReviews.length})` : `⭐ New`;
+    
+    let priceText = `₹${editor.price || '0'}`;
+    if(editor.maxPrice && parseFloat(editor.maxPrice) > parseFloat(editor.price)) {
+        priceText = `₹${editor.price} - ₹${editor.maxPrice}`;
+    }
+
+    let verifiedIcon = '';
+    if(editor.verificationType === 'blue') {
+        verifiedIcon = `<span title="Verified User" style="color: #3b82f6; display:inline-flex; align-items:center; margin-left:5px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></span>`;
+    } else if (editor.verificationType === 'golden') {
+        verifiedIcon = `<span title="Golden Profile" style="color: #fbbf24; display:inline-flex; align-items:center; margin-left:5px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></span>`;
+    }
+
+    const img = editor.photo_url || 'https://images.unsplash.com/photo-1600486913747-55e5470d6f40?crop=entropy&fit=max&fm=jpg&q=80&w=400';
+
+    return `
+        <div class="editor-row-card glass-card animate-fade" data-id="${editor.id}" style="display: flex; gap: 15px; padding: 15px; border-radius: 16px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.03); align-items: center; text-align: left; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+            <img src="${img}" style="width: 100px; height: 100px; border-radius: 12px; object-fit: cover;">
+            <div style="flex: 1;">
+                <h3 style="margin: 0 0 5px; font-size: 1.25rem;">${editor.name} ${verifiedIcon}</h3>
+                <p style="margin: 0 0 5px; font-size: 0.9rem; color: var(--primary); font-weight: 500;">${editor.category} Editor</p>
+                <div style="display: flex; gap: 10px; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px;">
+                    <span>${ratingText}</span>
+                    <span>•</span>
+                    <span style="color: white; font-weight: 600;">${priceText}</span>
+                </div>
+                <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${editor.bio || 'No bio provided.'}</p>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <button class="btn primary btn-sm btn-hire">Hire Now</button>
+                <button class="btn secondary btn-sm btn-message">Message</button>
+            </div>
+        </div>
+    `;
+}
+
 // User Interactions
-if(searchInput) searchInput.addEventListener('input', filterAndRenderEditors);
-if(document.getElementById('filterRating')) document.getElementById('filterRating').addEventListener('change', filterAndRenderEditors);
-if(document.getElementById('filterType')) document.getElementById('filterType').addEventListener('change', filterAndRenderEditors);
-if(document.getElementById('sortPrice')) document.getElementById('sortPrice').addEventListener('change', filterAndRenderEditors);
+if(document.getElementById('searchBtn')) document.getElementById('searchBtn').addEventListener('click', () => processSearch(false));
+if(searchInput) {
+    searchInput.addEventListener('keypress', (e) => {
+        if(e.key === 'Enter') processSearch(false);
+    });
+}
+if(document.getElementById('searchBtnResults')) document.getElementById('searchBtnResults').addEventListener('click', () => processSearch(true));
+if(document.getElementById('searchInputResults')) {
+    document.getElementById('searchInputResults').addEventListener('keypress', (e) => {
+        if(e.key === 'Enter') processSearch(true);
+    });
+}
+if(document.getElementById('closeSearchBtn')) {
+    document.getElementById('closeSearchBtn').addEventListener('click', () => {
+        window.switchNavView('home');
+        if(searchInput) searchInput.value = '';
+        if(document.getElementById('searchInputResults')) document.getElementById('searchInputResults').value = '';
+        renderHomeFeeds();
+    });
+}
+
+const syncFilters = () => {
+    // Keep filter selects strictly matched if we wanted to visually sync them, but for now we'll just run search
+    const isShowingResults = document.getElementById('searchResultsView') && document.getElementById('searchResultsView').style.display === 'block';
+    if (isShowingResults) { 
+        processSearch(true); 
+    } else { 
+        renderHomeFeeds(); 
+    }
+};
+
+['filterRating', 'filterType', 'sortPrice', 'filterRatingResults', 'filterTypeResults', 'sortPriceResults'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('change', syncFilters);
+});
+
+if(document.getElementById('applyBudgetBtn')) {
+    document.getElementById('applyBudgetBtn').addEventListener('click', () => processSearch(true));
+}
 
 filterChips.forEach(chip => {
     chip.addEventListener('click', (e) => {
         filterChips.forEach(c => c.classList.remove('active'));
         e.target.classList.add('active');
         currentCategory = e.target.getAttribute('data-cat');
-        filterAndRenderEditors();
+        
+        if (document.getElementById('searchResultsView') && document.getElementById('searchResultsView').style.display === 'block') {
+            processSearch();
+        } else {
+            renderHomeFeeds();
+        }
     });
 });
 
@@ -681,7 +973,7 @@ document.addEventListener('click', (e) => {
     // If they click on "Message", intercept it
     if (e.target.closest('.btn-message')) {
         e.stopPropagation();
-        const card = e.target.closest('.editor-card');
+        const card = e.target.closest('.editor-card, .editor-row-card');
         if (card) {
             currentProfileId = card.dataset.id;
             const ed = editors.find(editor => editor.id === currentProfileId);
@@ -715,14 +1007,14 @@ document.addEventListener('click', (e) => {
     // If they click on "Hire Now", intercept it
     if (e.target.closest('.btn-hire')) {
         e.stopPropagation();
-        const card = e.target.closest('.editor-card');
+        const card = e.target.closest('.editor-card, .editor-row-card');
         if (card) {
             openEditorProfile(card.dataset.id);
         }
         return;
     }
 
-    const card = e.target.closest('.editor-card');
+    const card = e.target.closest('.editor-card, .editor-row-card');
     if (card) {
         openEditorProfile(card.dataset.id);
     }
@@ -945,7 +1237,7 @@ document.getElementById('toggleWishlistBtn').addEventListener('click', async () 
         }
 
         // Refresh UI
-        filterAndRenderEditors();
+        refreshCurrentFeeds();
         renderTrending();
         renderWishlist();
 
@@ -1066,6 +1358,16 @@ window.openUserProfileModal = function(showMustComplete = false) {
 
     renderUserRequestsList();
     renderUserApplicationsList();
+    
+    const adminPanelReentryBtnProfile = document.getElementById('adminPanelReentryBtnProfile');
+    if (adminPanelReentryBtnProfile) {
+        if (window.currentUserIsAdmin) {
+            adminPanelReentryBtnProfile.style.display = 'flex';
+        } else {
+            adminPanelReentryBtnProfile.style.display = 'none';
+        }
+    }
+    
     userProfileModal.style.display = 'flex';
 };
 
@@ -1122,7 +1424,7 @@ window.deleteUserJobApp = async (appId) => {
             }
         }
         renderUserApplicationsList();
-        filterAndRenderEditors();
+        refreshCurrentFeeds();
         renderTrending();
         renderWishlist();
     } catch(e) {
@@ -1144,7 +1446,7 @@ window.recoverUserJobApp = async (appId) => {
             }
         }
         renderUserApplicationsList();
-        filterAndRenderEditors();
+        refreshCurrentFeeds();
         renderTrending();
         renderWishlist();
     } catch(e) {
@@ -1471,11 +1773,53 @@ document.addEventListener('mousemove', (e) => {
 // ==========================================
 // Settings & Hidden Admin Access
 // ==========================================
-if(settingsBtn) settingsBtn.addEventListener('click', () => { settingsModal.style.display = 'flex'; });
+if(settingsBtn) settingsBtn.addEventListener('click', () => {
+    settingsModal.style.display = 'flex';
+    const adminPanelReentryBtn = document.getElementById('adminPanelReentryBtn');
+    if (adminPanelReentryBtn) {
+        if (window.currentUserIsAdmin) {
+            adminPanelReentryBtn.style.display = 'flex';
+        } else {
+            adminPanelReentryBtn.style.display = 'none';
+        }
+    }
+});
 const authScreenSettingsBtn = document.getElementById('authScreenSettingsBtn');
-if(authScreenSettingsBtn) { authScreenSettingsBtn.addEventListener('click', () => { settingsModal.style.display = 'flex'; }); }
+if(authScreenSettingsBtn) { 
+    authScreenSettingsBtn.addEventListener('click', () => { 
+        settingsModal.style.display = 'flex'; 
+        const adminPanelReentryBtn = document.getElementById('adminPanelReentryBtn');
+        if (adminPanelReentryBtn) {
+            if (window.currentUserIsAdmin) {
+                adminPanelReentryBtn.style.display = 'flex';
+            } else {
+                adminPanelReentryBtn.style.display = 'none';
+            }
+        }
+    }); 
+}
 
 if(closeSettings) closeSettings.addEventListener('click', () => { settingsModal.style.display = 'none'; });
+
+const adminPanelReentryBtn = document.getElementById('adminPanelReentryBtn');
+const adminPanelReentryBtnProfile = document.getElementById('adminPanelReentryBtnProfile');
+
+function enterAdminPanel() {
+    settingsModal.style.display = 'none';
+    userProfileModal.style.display = 'none';
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('welcomeScreen').style.display = 'none';
+    document.getElementById('adminPanelOverlay').style.display = 'block';
+    if (typeof renderAdminList === 'function') renderAdminList();
+}
+
+if (adminPanelReentryBtn) {
+    adminPanelReentryBtn.addEventListener('click', enterAdminPanel);
+}
+
+if (adminPanelReentryBtnProfile) {
+    adminPanelReentryBtnProfile.addEventListener('click', enterAdminPanel);
+}
 
 // Handle Color Selection
 document.querySelectorAll('.color-btn').forEach(btn => {
@@ -1546,6 +1890,31 @@ if(document.getElementById('closeAdminPanelBtn')) {
         window.switchNavView('home');
     });
 }
+
+// Admin Tab Switching
+const adminTabBtns = document.querySelectorAll('.admin-tab-btn');
+const adminTabContents = document.querySelectorAll('.admin-tab-content');
+
+adminTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        if(btn.id === 'adminSupportChatsBtn' || btn.id === 'closeAdminPanelBtn') return;
+        const target = btn.getAttribute('data-tab');
+        if(!target) return;
+        
+        // Update active class on buttons
+        adminTabBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // Show correct content
+        adminTabContents.forEach(content => {
+            content.style.display = 'none';
+        });
+        const targetTab = document.getElementById('adminTab' + target.charAt(0).toUpperCase() + target.slice(1));
+        if (targetTab) {
+            targetTab.style.display = 'block';
+        }
+    });
+});
 
 function renderAdminList() {
     if (typeof setupAdminSupportListener === 'function') setupAdminSupportListener();
@@ -1618,6 +1987,44 @@ function renderAdminList() {
                     </td>
                 `;
                 appsTbody.appendChild(tr);
+            });
+        }
+    }
+
+    const featTbody = document.getElementById('adminFeaturedList');
+    if (featTbody) {
+        featTbody.innerHTML = '';
+        const featuredApps = editors.filter(e => e.verificationType === 'golden' || e.isBestEditor);
+        if (featuredApps.length === 0) {
+            featTbody.innerHTML = '<tr><td colspan="6" class="text-center text-secondary text-sm">No featured profiles managed.</td></tr>';
+        } else {
+            featuredApps.forEach(ed => {
+                const tr = document.createElement('tr');
+                const isGolden = ed.verificationType === 'golden';
+                const isBest = ed.isBestEditor;
+                
+                let typeBadge = '';
+                if(isGolden) typeBadge += '<span class="text-xs" style="color:var(--warning); margin-right:5px;">★ Golden</span>';
+                if(isBest) typeBadge += '<span class="text-xs" style="color:#3b82f6;">⭐ Best Choice</span>';
+                
+                let expiryText = 'Never';
+                if (isGolden && ed.goldenExpiry) expiryText = new Date(ed.goldenExpiry).toLocaleString();
+                if (isBest && ed.bestExpiry) expiryText = new Date(ed.bestExpiry).toLocaleString();
+                
+                tr.innerHTML = `
+                    <td style="display:flex; align-items:center; gap:10px;">
+                        <img src="${ed.photo_url || 'https://via.placeholder.com/40'}" class="table-img">
+                        <strong>${ed.name}</strong>
+                    </td>
+                    <td>${typeBadge}</td>
+                    <td>-</td>
+                    <td><span class="text-xs text-secondary">${expiryText}</span></td>
+                    <td>Active</td>
+                    <td>
+                        <button class="btn secondary btn-sm" onclick="window.manageFeaturedEditor('${ed.id}')">Manage</button>
+                    </td>
+                `;
+                featTbody.appendChild(tr);
             });
         }
     }
@@ -1724,7 +2131,7 @@ window.approveJobApp = async (appId) => {
         
         renderAdminList();
         renderTrending();
-        filterAndRenderEditors();
+        refreshCurrentFeeds();
         alert('Editor approved and added to platform!');
     } catch(e) {
         console.error(e);
@@ -1874,6 +2281,125 @@ window.deleteAdminEditor = async (id) => {
         }
     }
 };
+
+// Featured Management Logic
+window.manageFeaturedEditor = (editorId = null) => {
+    document.getElementById('featuredForm').reset();
+    document.getElementById('featuredEditorId').value = '';
+    
+    // Populate select
+    const select = document.getElementById('featuredEditorSelect');
+    select.innerHTML = '<option value="">Select an editor...</option>';
+    editors.forEach(ed => {
+        const option = document.createElement('option');
+        option.value = ed.id;
+        option.textContent = ed.name;
+        select.appendChild(option);
+    });
+
+    if (editorId) {
+        select.value = editorId;
+        const ed = editors.find(e => e.id === editorId);
+        if (ed) {
+            document.getElementById('featuredEditorId').value = ed.id;
+            document.getElementById('featuredType').value = ed.isBestEditor ? 'best' : 'golden';
+            document.getElementById('revokeFeaturedBtn').style.display = 'block';
+        }
+    } else {
+        document.getElementById('revokeFeaturedBtn').style.display = 'none';
+        
+        // If clicking the top "+ Assign Featured" button
+        select.addEventListener('change', function() {
+            document.getElementById('featuredEditorId').value = this.value;
+            const ed = editors.find(e => e.id === this.value);
+            if (ed && (ed.verificationType === 'golden' || ed.isBestEditor)) {
+                document.getElementById('revokeFeaturedBtn').style.display = 'block';
+                document.getElementById('featuredType').value = ed.isBestEditor ? 'best' : 'golden';
+            } else {
+                document.getElementById('revokeFeaturedBtn').style.display = 'none';
+            }
+        });
+    }
+
+    document.getElementById('featuredManagerModal').style.display = 'flex';
+};
+
+if (document.getElementById('assignFeaturedBtn')) {
+    document.getElementById('assignFeaturedBtn').addEventListener('click', () => window.manageFeaturedEditor());
+}
+if (document.getElementById('closeFeaturedManager')) {
+    document.getElementById('closeFeaturedManager').addEventListener('click', () => document.getElementById('featuredManagerModal').style.display = 'none');
+}
+if (document.getElementById('cancelFeaturedManager')) {
+    document.getElementById('cancelFeaturedManager').addEventListener('click', (e) => { e.preventDefault(); document.getElementById('featuredManagerModal').style.display = 'none'; });
+}
+
+if (document.getElementById('saveFeaturedBtn')) {
+    document.getElementById('saveFeaturedBtn').addEventListener('click', async (e) => {
+        e.preventDefault();
+        const editorId = document.getElementById('featuredEditorId').value;
+        if (!editorId) return alert('Please select an editor.');
+
+        const type = document.getElementById('featuredType').value;
+        const val = parseFloat(document.getElementById('featuredDurationValue').value);
+        const unit = document.getElementById('featuredDurationUnit').value;
+
+        let expiryTime = null;
+        const now = Date.now();
+        if (unit !== 'permanent') {
+            if (!val || val <= 0) return alert('Enter a valid duration.');
+            if (unit === 'hours') expiryTime = now + (val * 60 * 60 * 1000);
+            if (unit === 'days') expiryTime = now + (val * 24 * 60 * 60 * 1000);
+            if (unit === 'months') expiryTime = now + (val * 30 * 24 * 60 * 60 * 1000);
+        }
+
+        const payload = {};
+        if (type === 'golden') {
+            payload.verificationType = 'golden';
+            payload.goldenExpiry = expiryTime;
+            payload.isBestEditor = false;
+        } else {
+            payload.isBestEditor = true;
+            payload.bestExpiry = expiryTime;
+            payload.verificationType = 'none'; // Un-golden them if setting to best? Let's assume they are separate but let's just keep their config
+        }
+
+        try {
+            await update(ref(db, "editors/" + editorId), payload);
+            document.getElementById('featuredManagerModal').style.display = 'none';
+            fetchEditors();
+            alert('Featured status applied.');
+        } catch(err) {
+            console.error(err);
+            alert('Failed to update status.');
+        }
+    });
+}
+
+if (document.getElementById('revokeFeaturedBtn')) {
+    document.getElementById('revokeFeaturedBtn').addEventListener('click', async (e) => {
+        e.preventDefault();
+        const editorId = document.getElementById('featuredEditorId').value;
+        if (!editorId) return;
+
+        if (confirm("Revoke all featured (Golden/Best) status from this editor?")) {
+            try {
+                // To be safe, revoke both
+                await update(ref(db, "editors/" + editorId), {
+                    verificationType: 'verified', // Fallback to normal verified
+                    goldenExpiry: null,
+                    isBestEditor: false,
+                    bestExpiry: null
+                });
+                document.getElementById('featuredManagerModal').style.display = 'none';
+                fetchEditors();
+            } catch(err) {
+                console.error(err);
+                alert('Failed to revoke status.');
+            }
+        }
+    });
+}
 
 // Save Editor Logic
 if(document.getElementById('saveEditorBtn')) document.getElementById('saveEditorBtn').addEventListener('click', async () => {
@@ -2689,4 +3215,481 @@ if (sendAdminSupportMsgBtn && adminSupportChatInput) {
         if (e.key === 'Enter') sendAdminMessage();
     });
 }
+
+// Auto-shuffle All Editors every 60 seconds
+setInterval(() => {
+    const isShowingResults = document.getElementById('searchResultsView') && document.getElementById('searchResultsView').style.display === 'block';
+    const homeView = document.getElementById('homeView');
+    
+    if (!isShowingResults && homeView && homeView.style.display !== 'none') {
+        const mainGrid = document.getElementById('mainGrid');
+        if (mainGrid && mainGrid.children.length > 1) {
+            const children = Array.from(mainGrid.children);
+            children.sort(() => Math.random() - 0.5);
+            children.forEach(child => {
+                child.style.transition = 'opacity 0.3s';
+                child.style.opacity = '0';
+            });
+            
+            setTimeout(() => {
+                children.forEach(child => mainGrid.appendChild(child));
+                children.forEach(child => {
+                    void child.offsetWidth; // Force reflow
+                    child.style.opacity = '1';
+                });
+            }, 300);
+        }
+    }
+}, 60000);
+
+// Super Admin Logic
+const SUPER_ADMIN_PW = "Escanor @6289947781";
+const superadminLoginBtn = document.getElementById('superadminLoginBtn');
+const superadminPassword = document.getElementById('superadminPassword');
+const superadminErrorMsg = document.getElementById('superadminErrorMsg');
+const superadminAuthSection = document.getElementById('superadminAuthSection');
+const superadminContentSection = document.getElementById('superadminContentSection');
+const addAdminManagerModal = document.getElementById('addAdminManagerModal');
+
+if (superadminLoginBtn) {
+    superadminLoginBtn.addEventListener('click', () => {
+        if (superadminPassword.value === SUPER_ADMIN_PW) {
+            superadminAuthSection.style.display = 'none';
+            superadminContentSection.style.display = 'block';
+            fetchAdmins();
+        } else {
+            superadminErrorMsg.style.display = 'block';
+        }
+    });
+}
+
+function fetchAdmins() {
+    get(ref(db, "admins")).then(snap => {
+        const adminTbody = document.getElementById('adminManagersList');
+        if (!adminTbody) return;
+        adminTbody.innerHTML = '';
+        
+        let hardcodedAdmins = ['dwiphalder49@gmail.com', 'dwiphalder608@gmail.com'];
+        let hasAdminsInDb = false;
+        
+        if (snap.exists()) {
+            hasAdminsInDb = true;
+            const admins = snap.val();
+            Object.keys(admins).forEach(key => {
+                const admin = admins[key];
+                const tr = document.createElement('tr');
+                const disabledStatus = admin.isDisabled ? '<span class="text-danger text-xs">Disabled</span>' : '<span class="text-success text-xs">Active</span>';
+                const toggleBtn = admin.isDisabled 
+                    ? `<button class="btn success btn-sm" onclick="window.toggleAdmin('${key}', false)">Enable</button>`
+                    : `<button class="btn warning btn-sm" onclick="window.toggleAdmin('${key}', true)">Disable</button>`;
+                
+                tr.innerHTML = `
+                    <td>${admin.email} <br>${disabledStatus}</td>
+                    <td>${new Date(admin.addedAt).toLocaleDateString()}</td>
+                    <td style="display:flex; gap:10px;">
+                        ${toggleBtn}
+                        <button class="btn danger btn-sm" onclick="window.removeAdmin('${key}')">Remove</button>
+                    </td>
+                `;
+                adminTbody.appendChild(tr);
+            });
+        }
+        
+        if (!hasAdminsInDb) {
+            // Display hardcoded ones so user can manage them
+            hardcodedAdmins.forEach((email, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${email} <span class="text-xs text-warning">(Default)</span></td>
+                    <td>Platform Creator</td>
+                    <td><button class="btn danger btn-sm" onclick="window.removeAdmin('fallback_${idx}')" disabled style="opacity: 0.5;">Required</button></td>
+                `;
+                adminTbody.appendChild(tr);
+            });
+        }
+    }).catch(err => console.error("Error fetching admins", err));
+}
+
+if (document.getElementById('addNewAdminBtn')) {
+    document.getElementById('addNewAdminBtn').addEventListener('click', () => {
+        document.getElementById('adminSearchInput').value = '';
+        document.getElementById('adminSearchResult').style.display = 'none';
+        document.getElementById('adminSearchError').style.display = 'none';
+        document.getElementById('newAdminEmail').value = '';
+        document.getElementById('newAdminPassword').value = '';
+        window.foundAdminCandidate = null;
+        addAdminManagerModal.style.display = 'flex';
+    });
+}
+if (document.getElementById('closeAddAdminManager')) {
+    document.getElementById('closeAddAdminManager').addEventListener('click', () => { addAdminManagerModal.style.display = 'none'; });
+}
+
+if (document.getElementById('adminSearchBtn')) {
+    document.getElementById('adminSearchBtn').addEventListener('click', () => {
+        const query = document.getElementById('adminSearchInput').value.trim().toLowerCase();
+        let foundUid = null;
+        let foundData = null;
+        
+        // Exact short ID length is 8
+        Object.keys(allUsers).forEach(uid => {
+            const u = allUsers[uid];
+            if (uid.toLowerCase() === query || uid.substring(0,8).toLowerCase() === query || (u.email && u.email.toLowerCase() === query)) {
+                foundUid = uid;
+                foundData = u;
+            }
+        });
+        
+        if (foundUid && foundData) {
+            window.foundAdminCandidate = { uid: foundUid, email: foundData.email, name: foundData.firstName + ' ' + foundData.lastName };
+            document.getElementById('adminSearchAvatar').src = foundData.photoUrl || 'https://via.placeholder.com/60';
+            document.getElementById('adminSearchName').textContent = foundData.firstName + ' ' + foundData.lastName;
+            document.getElementById('adminSearchEmail').textContent = foundData.email;
+            document.getElementById('adminSearchResult').style.display = 'block';
+            document.getElementById('adminSearchError').style.display = 'none';
+        } else {
+            window.foundAdminCandidate = null;
+            document.getElementById('adminSearchResult').style.display = 'none';
+            document.getElementById('adminSearchError').style.display = 'block';
+        }
+    });
+}
+
+if (document.getElementById('confirmAddAdminBtn')) {
+    document.getElementById('confirmAddAdminBtn').addEventListener('click', async () => {
+        if(!window.foundAdminCandidate) return;
+        const email = window.foundAdminCandidate.email;
+        const uid = window.foundAdminCandidate.uid;
+        
+        try {
+            const adminRef = push(ref(db, "admins"));
+            await set(adminRef, {
+                email: email,
+                uid: uid,
+                addedAt: Date.now(),
+                isDisabled: false
+            });
+            alert("Admin access granted to " + window.foundAdminCandidate.name);
+            addAdminManagerModal.style.display = 'none';
+            fetchAdmins();
+        } catch(err) {
+            console.error(err);
+            alert("Failed to grant admin access.");
+        }
+    });
+}
+
+if (document.getElementById('createNewAdminBtn')) {
+    document.getElementById('createNewAdminBtn').addEventListener('click', async () => {
+        const email = document.getElementById('newAdminEmail').value.trim().toLowerCase();
+        const password = document.getElementById('newAdminPassword').value;
+        if(!email || !password) return alert("Please enter both an email address and a password.");
+        if(password.length < 6) return alert("Password must be at least 6 characters.");
+        
+        // We initialize a secondary firebase app to purely create the account without logging out the current admin
+        try {
+            const tempApp = initializeApp(firebaseConfig, "TempApp_" + Date.now());
+            const tempAuth = getAuth(tempApp);
+            
+            await createUserWithEmailAndPassword(tempAuth, email, password);
+            
+            // Now sign out from the temp app so it isn't left hanging
+            await signOut(tempAuth);
+            
+            // Record admin in the database
+            const adminRef = push(ref(db, "admins"));
+            await set(adminRef, {
+                email: email,
+                addedAt: Date.now(),
+                isDisabled: false
+            });
+            alert("Admin created successfully. They can now log in using the email and password.");
+            addAdminManagerModal.style.display = 'none';
+            document.getElementById('newAdminEmail').value = '';
+            document.getElementById('newAdminPassword').value = '';
+            fetchAdmins();
+        } catch(err) {
+            console.error(err);
+            if (err.code === 'auth/email-already-in-use') {
+                // If it already exists, just add it to the admins list
+                try {
+                    const adminRef = push(ref(db, "admins"));
+                    await set(adminRef, {
+                        email: email,
+                        addedAt: Date.now(),
+                        isDisabled: false
+                    });
+                    alert("User already existed. They have now been granted admin privileges! (Password unchanged)");
+                    addAdminManagerModal.style.display = 'none';
+                    document.getElementById('newAdminEmail').value = '';
+                    document.getElementById('newAdminPassword').value = '';
+                    fetchAdmins();
+                } catch(e) {
+                     alert("Failed to grant admin access to existing user.");
+                }
+            } else {
+                alert("Failed to create admin: " + err.message);
+            }
+        }
+    });
+}
+
+window.toggleAdmin = async (adminId, disableState) => {
+    try {
+        await update(ref(db, "admins/" + adminId), { isDisabled: disableState });
+        fetchAdmins();
+    } catch(err) {
+        console.error(err);
+        alert("Failed to toggle admin state.");
+    }
+};
+
+window.removeAdmin = async (adminId) => {
+    if(adminId.startsWith('fallback_')) return alert("Cannot remove default admins. You must add new admins first.");
+    if(confirm("Are you sure you want to revoke admin access for this user?")) {
+        try {
+            const snap = await get(ref(db, "admins"));
+            if (snap.exists()) {
+                const adminsCount = Object.keys(snap.val()).length;
+                if (adminsCount <= 1) {
+                    return alert("You cannot remove the last remaining admin. Add another admin first.");
+                }
+            }
+            await remove(ref(db, "admins/" + adminId));
+            fetchAdmins();
+        } catch(err) {
+            console.error(err);
+            alert("Failed to remove admin.");
+        }
+    }
+};
+
+// ==========================================
+// AI Assistant Logic
+// ==========================================
+window.populateJobAppsSelect = function() {
+    const appSelect = document.getElementById('aiJobAppSelect');
+    if(!appSelect) return;
+    const pendingApps = allApplications ? allApplications.filter(a => a.status === 'pending') : [];
+    appSelect.innerHTML = '<option value="">-- Choose a pending application --</option>';
+    pendingApps.forEach(app => {
+        const name = app.name || 'Unknown';
+        appSelect.innerHTML += `<option value="${app.id}">${name} - ${app.email}</option>`;
+    });
+};
+
+// 1. Setup Admin Tab handling for AI Assistant
+const aiAdminTabBtns = document.querySelectorAll('.admin-tab-btn');
+
+aiAdminTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        if(btn.id === 'adminSupportChatsBtn' || btn.id === 'closeAdminPanelBtn') return;
+        const target = btn.getAttribute('data-tab');
+        if(target === 'ai_assistant') {
+            populateJobAppsSelect();
+        }
+    });
+});
+
+// 2. Image Generator
+const generateBtn = document.getElementById('aiGenerateImageBtn');
+const promptInput = document.getElementById('aiImagePrompt');
+const ratioSelect = document.getElementById('aiImageAspectRatio');
+const loadingDiv = document.getElementById('aiImageLoading');
+const resultContainer = document.getElementById('aiImageResultContainer');
+const resultImg = document.getElementById('aiGeneratedImage');
+const downloadBtn = document.getElementById('aiImageDownloadBtn');
+
+    if (generateBtn) {
+        generateBtn.addEventListener('click', () => {
+            const prompt = promptInput.value.trim();
+            if(!prompt) return alert('Please enter a prompt.');
+            
+            loadingDiv.style.display = 'block';
+            resultContainer.style.display = 'none';
+            generateBtn.disabled = true;
+
+            const [width, height] = ratioSelect.value.split('x');
+            const encodedPrompt = encodeURIComponent(prompt) + encodeURIComponent(" professional high quality polished 8k");
+            
+            // Generate a random seed to prevent caching
+            const seed = Math.floor(Math.random() * 9999999);
+            const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&seed=${seed}&nologo=true`;
+
+            // Preload image
+            const img = new Image();
+            img.onload = () => {
+                resultImg.src = imageUrl;
+                loadingDiv.style.display = 'none';
+                resultContainer.style.display = 'block';
+                generateBtn.disabled = false;
+            };
+            img.onerror = () => {
+                alert('Failed to generate image. Please try again.');
+                loadingDiv.style.display = 'none';
+                generateBtn.disabled = false;
+            };
+            img.src = imageUrl;
+        });
+    }
+
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', async () => {
+            const url = resultImg.src;
+            if(!url) return;
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                const objectUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = objectUrl;
+                a.download = `lumina-ai-bg-${Date.now()}.jpg`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(objectUrl);
+            } catch(e) {
+                alert('Failed to download image.');
+            }
+        });
+    }
+
+    // 3. Application Enhancer
+    const appSelect = document.getElementById('aiJobAppSelect');
+    const workspace = document.getElementById('aiJobAppWorkspace');
+    const originalBio = document.getElementById('aiOriginalBio');
+    const originalTags = document.getElementById('aiOriginalTags');
+    const textLoading = document.getElementById('aiTextLoading');
+    const enhancedWorkspace = document.getElementById('aiEnhancedWorkspace');
+    const enhancedBio = document.getElementById('aiEnhancedBio');
+    const enhancedTags = document.getElementById('aiEnhancedTags');
+    const enhanceBtn = document.getElementById('aiEnhanceContentBtn');
+    const saveApproveBtn = document.getElementById('aiSaveAndApproveBtn');
+
+    if (appSelect) {
+        appSelect.addEventListener('change', (e) => {
+            const val = e.target.value;
+            if(!val) {
+                workspace.style.display = 'none';
+                return;
+            }
+            
+            const app = allApplications.find(a => a.id === val);
+            if(app) {
+                originalBio.textContent = app.bio || 'No bio provided.';
+                originalTags.textContent = app.tags || 'No tags provided.';
+                workspace.style.display = 'block';
+                enhancedWorkspace.style.display = 'none';
+            }
+        });
+    }
+
+    if (enhanceBtn) {
+        enhanceBtn.addEventListener('click', async () => {
+            const appId = appSelect.value;
+            const app = allApplications.find(a => a.id === appId);
+            if(!app) return;
+
+            textLoading.style.display = 'block';
+            enhancedWorkspace.style.display = 'none';
+            enhanceBtn.disabled = true;
+
+            const bioPrompt = encodeURIComponent(`Rewrite the following bio professionally to attract clients in a creative marketplace. Keep it concise, engaging, and in first person. Fix all grammar issues. Do not add any conversational filler, just the rewritten bio. Original bio: ${app.bio || 'I edit videos'}`);
+            const tagsPrompt = encodeURIComponent(`Given the following bio: "${app.bio || 'I edit videos'}", suggest 4-6 concise comma-separated tags (like "Video Editing", "VFX", "Color Grading"). Do not include quotes or bullet points. Just comma separated words. Output format: Tag 1, Tag 2, Tag 3`);
+
+            try {
+                const [bioRes, tagsRes] = await Promise.all([
+                    fetch(`https://text.pollinations.ai/prompt/${bioPrompt}`),
+                    fetch(`https://text.pollinations.ai/prompt/${tagsPrompt}`)
+                ]);
+                
+                const rewritenBio = await bioRes.text();
+                let rewritenTags = await tagsRes.text();
+
+                // Clean up tags
+                rewritenTags = rewritenTags.replace(/["\n\*]/g, '').trim();
+
+                enhancedBio.value = rewritenBio;
+                enhancedTags.value = rewritenTags;
+
+                textLoading.style.display = 'none';
+                enhancedWorkspace.style.display = 'block';
+                enhanceBtn.disabled = false;
+            } catch(e) {
+                alert('Text generation failed. Please try again.');
+                textLoading.style.display = 'none';
+                enhanceBtn.disabled = false;
+            }
+        });
+    }
+
+    if (saveApproveBtn) {
+        saveApproveBtn.addEventListener('click', async () => {
+            const appId = appSelect.value;
+            const app = allApplications.find(a => a.id === appId);
+            if(!app) return;
+
+            const newBio = enhancedBio.value.trim();
+            const newTags = enhancedTags.value.trim();
+
+            if(!newBio || !newTags) return alert('Please ensure bio and tags are not empty.');
+
+            saveApproveBtn.innerHTML = 'Approving...';
+            saveApproveBtn.disabled = true;
+
+            try {
+                // Update the application object locally
+                app.bio = newBio;
+                app.tags = newTags;
+
+                await window.aiDirectApproveJobApp(appId);
+                
+                alert('Application approved and published successfully with AI enhanced content!');
+                saveApproveBtn.innerHTML = 'Save Changes & Approve Application';
+                saveApproveBtn.disabled = false;
+                workspace.style.display = 'none';
+                appSelect.value = '';
+                populateJobAppsSelect(); // refresh
+            } catch(e) {
+                console.error(e);
+                alert('Failed to approve application.');
+                saveApproveBtn.innerHTML = 'Save Changes & Approve Application';
+                saveApproveBtn.disabled = false;
+            }
+        });
+    }
+
+window.aiDirectApproveJobApp = async (appId) => {
+    const app = allApplications.find(a => a.id === appId);
+    if(!app) return;
+    
+    // Create new editor entry
+    const editorRef = push(ref(db, "editors"));
+    const newEditorData = {
+        userId: app.userId || '',
+        name: app.name || '',
+        email: app.email || '',
+        phone: app.phone || '',
+        portfolioUrl: app.portfolioUrl || '',
+        bio: app.bio || '',
+        tags: app.tags || '',
+        category: app.category || '',
+        price: app.price || 0,
+        maxPrice: app.maxPrice || null,
+        currency: app.currency || 'INR',
+        photo_url: app.photo_url || '',
+        status: 'active',
+        isFeatured: false,
+        joinedAt: Date.now(),
+        ordersCompleted: 0,
+        rating: 0
+    };
+    await set(editorRef, newEditorData);
+    
+    // Set application status to approved
+    await update(ref(db, "editor_applications/" + appId), { status: 'approved' });
+    app.status = 'approved';
+    
+    renderAdminList();
+};
 

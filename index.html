@@ -137,9 +137,10 @@
             <div style="display: flex; gap: 10px; margin: 0 auto 1.5rem; max-width: 100%; align-items: center; justify-content: center;">
                 <div class="search-bar-large" style="margin: 0; box-shadow: none; flex: 1;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input type="text" id="searchInput" placeholder="Search editors by name or skill...">
+                    <input type="text" id="searchInput" placeholder="Search editors by name, skill or style...">
+                    <button class="btn primary" id="searchBtn" style="height: 100%; border-radius: 20px; padding: 0 1.5rem; margin-left: 5px;">Search</button>
                 </div>
-                <button id="toggleFiltersBtn" class="icon-btn" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; height: 50px; width: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                <button id="toggleFiltersBtn" class="icon-btn" title="Advanced Filters" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; height: 50px; width: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
                 </button>
             </div>
@@ -183,18 +184,99 @@
             <div class="editors-grid trending-grid" id="trendingGrid"></div>
         </section>
 
+        <!-- Golden Profile Editors -->
+        <section class="golden-editors-section mt-4" id="goldenEditorsSection" style="display: none;">
+            <h2 style="color: #fbbf24; display: flex; align-items: center; gap: 8px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                Golden Profile Editors
+            </h2>
+            <p class="text-secondary mb-3">Premium verified experts with outstanding track records.</p>
+            <div class="horizontal-scroll-container" id="goldenGrid"></div>
+        </section>
+
+        <!-- Best Editors Choice -->
+        <section class="best-editors-section mt-4" id="bestEditorsSection" style="display: none;">
+            <h2 style="color: #3b82f6; display: flex; align-items: center; gap: 8px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                Best Editor's Choice
+            </h2>
+            <p class="text-secondary mb-3">Highly rated professionals curated for top quality.</p>
+            <div class="horizontal-scroll-container" id="bestEditorsGrid"></div>
+        </section>
+
         <!-- All Editors -->
         <section class="all-editors-section mt-4">
-            <h2>Explore Editors</h2>
-            <div id="loadingMain" class="text-center p-4">
-                <div class="spinner"></div>
-                <p>Loading talent...</p>
-            </div>
+            <h2 style="display: flex; align-items: center; gap: 8px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                All Editors
+            </h2>
             <div class="editors-grid" id="mainGrid"></div>
             <div id="emptyMain" class="text-center p-4" style="display: none; color: var(--text-secondary);">
-                No editors found matching your criteria.
+                No more editors found.
             </div>
         </section>
+        </div>
+
+        <div id="searchResultsView" style="display: none;" class="mt-4 pb-10">
+            <section class="filter-section mx-auto mb-6" style="max-width: 800px; padding: 2rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                    <h2 class="gradient-text tracking-tight uppercase m-0" style="font-family: 'Outfit', sans-serif; font-size: clamp(1.5rem, 4vw, 2.5rem); font-weight: 800; line-height: 1.1;">SEARCH RESULTS</h2>
+                    <button class="btn secondary" id="closeSearchBtn">Back to Home</button>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin: 15px auto; max-width: 100%; align-items: center; justify-content: center;">
+                    <div class="search-bar-large" style="margin: 0; box-shadow: none; flex: 1;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <input type="text" id="searchInputResults" placeholder="Search editors by name, skill or style...">
+                        <button class="btn primary" id="searchBtnResults" style="height: 100%; border-radius: 20px; padding: 0 1.5rem; margin-left: 5px;">Search</button>
+                    </div>
+                    <button id="toggleFiltersBtnResults" class="icon-btn" title="Advanced Filters" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; height: 50px; width: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                    </button>
+                </div>
+
+                <div id="filterContainerResults" style="display: none;">
+                    <div class="advanced-filters mt-4" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <select id="filterRatingResults" class="filter-select">
+                            <option value="All">⭐ All Ratings</option>
+                            <option value="4+">⭐ 4.0 & Above</option>
+                            <option value="3+">⭐ 3.0 & Above</option>
+                        </select>
+                        <select id="filterTypeResults" class="filter-select">
+                            <option value="All">👤 Editor Type</option>
+                            <option value="New">New Editors</option>
+                            <option value="Experienced">Experienced</option>
+                        </select>
+                        <select id="sortPriceResults" class="filter-select">
+                            <option value="None">💰 Price Sort</option>
+                            <option value="LowToHigh">Low to High</option>
+                            <option value="HighToLow">High to Low</option>
+                        </select>
+                        
+                        <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap; background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 12px; border: 1px solid var(--glass-border);">
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">Budget:</span>
+                            <input type="number" id="minBudget" placeholder="Min ₹" style="width: 80px; padding: 4px 8px; border-radius: 6px; border: none; background: rgba(0,0,0,0.3); color: white; font-size: 0.85rem;" min="0">
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">-</span>
+                            <input type="number" id="maxBudget" placeholder="Max ₹" style="width: 80px; padding: 4px 8px; border-radius: 6px; border: none; background: rgba(0,0,0,0.3); color: white; font-size: 0.85rem;" min="0">
+                            <button id="applyBudgetBtn" class="btn primary btn-sm" style="padding: 4px 10px; border-radius: 6px; font-size: 0.8rem;">Apply</button>
+                        </div>
+                    </div>
+                </div>
+
+                <p id="searchQueryLabel" class="text-secondary mt-3 mb-2" style="font-size: 1rem;"></p>
+                <div id="searchLoading" class="text-center p-4" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Searching...</p>
+                </div>
+                <div id="searchResultsList" class="editors-grid mt-4">
+                    <!-- Cards will be populated here -->
+                </div>
+                <div id="emptySearch" class="text-center p-5 glass-card mt-4" style="display: none; background: rgba(255,255,255,0.02);">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.5; margin-bottom: 10px; display: inline-block;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <h4>No matching editors found</h4>
+                    <p class="text-secondary text-sm">Try adjusting your search terms or filters.</p>
+                </div>
+            </section>
         </div>
 
         <div id="wishlistView" style="display: none;" class="mt-4 pb-10">
@@ -516,6 +598,11 @@
                 </div>
                 <button class="btn primary w-100" id="saveUserProfileBtn">Save Profile</button>
                 
+                <button id="adminPanelReentryBtnProfile" class="btn warning w-100 mt-3" style="display:none; transition: all 0.3s; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3); font-weight: bold; justify-content: center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    Admin Panel
+                </button>
+                
                 <hr style="margin:20px 0; border:1px solid var(--glass-border);">
                 
                 <h3>My Requests</h3>
@@ -630,6 +717,11 @@
                     <h4>Lumina Editors</h4>
                     <p class="text-sm text-secondary">The premier marketplace for digital creators.</p>
                     <span id="appVersionTracker" class="app-version mt-2 block" style="cursor: default; user-select: none; color: var(--text-secondary); font-size: 0.8rem; padding:10px;">App Version 1.0.0</span>
+                    
+                    <button id="adminPanelReentryBtn" class="btn warning w-100 mt-3" style="display:none; transition: all 0.3s; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3); font-weight: bold; justify-content: center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        Admin Panel
+                    </button>
                 </div>
             </div>
             <div class="modal-footer">
@@ -657,108 +749,278 @@
     </div>
 
     <!-- Hidden Admin Panel (Full Screen Modal) -->
-    <div class="admin-panel-overlay" id="adminPanelOverlay" style="display: none;">
-        <div class="admin-panel-container">
-            <div class="admin-navbar">
-                <div class="logo">
-                    <span>Lumina <strong>Admin</strong></span>
+    <div class="admin-panel-overlay" id="adminPanelOverlay" style="display: none; background: #0f1115;">
+        <div class="admin-layout" style="display: flex; height: 100vh; overflow: hidden;">
+            
+            <!-- Sidebar -->
+            <div class="admin-sidebar" style="width: 250px; background: rgba(255,255,255,0.03); border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column;">
+                <div style="padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <h2 class="gradient-text m-0" style="font-size: 1.5rem;">Lumina Admin</h2>
                 </div>
-                <button class="btn secondary" id="closeAdminPanelBtn">Exit Admin</button>
+                
+                <nav class="admin-nav" style="flex: 1; padding: 20px 10px; display: flex; flex-direction: column; gap: 10px;">
+                    <button class="btn admin-tab-btn active" data-tab="dashboard" style="background: transparent; color: white; text-align: left; justify-content: flex-start; border: none; padding: 12px 15px;">📊 Dashboard</button>
+                    <button class="btn admin-tab-btn" data-tab="editors" style="background: transparent; color: white; text-align: left; justify-content: flex-start; border: none; padding: 12px 15px;">👥 Manage Editors</button>
+                    <button class="btn admin-tab-btn" data-tab="featured" style="background: transparent; color: white; text-align: left; justify-content: flex-start; border: none; padding: 12px 15px;">⭐ Featured Profiles</button>
+                    <button class="btn admin-tab-btn" data-tab="applications" style="background: transparent; color: white; text-align: left; justify-content: flex-start; border: none; padding: 12px 15px;">📄 Job Applications</button>
+                    <button class="btn admin-tab-btn" data-tab="users" style="background: transparent; color: white; text-align: left; justify-content: flex-start; border: none; padding: 12px 15px;">🧑‍💻 Registered Users</button>
+                    <button class="btn admin-tab-btn" data-tab="ai_assistant" style="background: transparent; color: white; text-align: left; justify-content: flex-start; border: none; padding: 12px 15px; color: #a180ff;">✨ AI Studio</button>
+                    <button class="btn admin-tab-btn" data-tab="superadmin" style="background: transparent; color: white; text-align: left; justify-content: flex-start; border: none; padding: 12px 15px; color: var(--warning);">🛠️ Developer Access</button>
+                    <button class="btn admin-tab-btn" id="adminSupportChatsBtn" style="background: transparent; color: white; text-align: left; justify-content: flex-start; border: none; padding: 12px 15px; position:relative;">
+                        💬 Support Chats
+                        <span id="adminUnreadSupportBadge" style="display:none; position:absolute; right:15px; background:red; color:white; border-radius:50%; width:20px; height:20px; font-size:12px; align-items:center; justify-content:center;">0</span>
+                    </button>
+                </nav>
+                
+                <div style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.05);">
+                    <button class="btn secondary w-100" id="closeAdminPanelBtn">Exit Admin</button>
+                </div>
             </div>
             
-            <div class="admin-dashboard container" style="max-width:1200px; margin:0 auto; padding:2rem;">
-                <div class="stats-grid mb-4" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
-                    <div class="stat-card glass-card" style="background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;">
-                        <h3>Total Users</h3>
-                        <p id="statTotalUsers" class="stat-number">0</p>
-                    </div>
-                    <div class="stat-card glass-card" style="background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;">
-                        <h3>Profile Views</h3>
-                        <p id="statTotalViews" class="stat-number">0</p>
-                    </div>
-                    <div class="stat-card glass-card" style="background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;">
-                        <h3>Total Editors</h3>
-                        <p id="statTotal" class="stat-number">0</p>
-                    </div>
-                    <div class="stat-card glass-card" style="background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:12px;">
-                        <h3>Featured</h3>
-                        <p id="statFeatured" class="stat-number">0</p>
-                    </div>
-                </div>
-
-                <div class="admin-header-actions mb-3" style="display: flex; justify-content: space-between; align-items: center;">
-                    <h2>Manage Editors</h2>
-                    <div style="display: flex; gap: 10px;">
-                        <button class="btn secondary" id="adminSupportChatsBtn" style="position:relative;">
-                            Support Chats
-                            <span id="adminUnreadSupportBadge" style="display:none; position:absolute; top:-8px; right:-8px; background:red; color:white; border-radius:50%; width:20px; height:20px; font-size:12px; align-items:center; justify-content:center;">0</span>
-                        </button>
-                        <button class="btn primary" id="addNewEditorBtn">+ Add Editor</button>
+            <!-- Main Content Area -->
+            <div class="admin-main-content" style="flex: 1; overflow-y: auto; padding: 30px; background: #0f1115;">
+                
+                <!-- Tab: Dashboard -->
+                <div id="adminTabDashboard" class="admin-tab-content">
+                    <h2 class="mb-4">Overview</h2>
+                    <div class="stats-grid mb-5" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
+                        <div class="stat-card glass-card p-4 text-center" style="border-radius: 16px;">
+                            <h3 class="text-secondary" style="font-size:1rem;">Total Users</h3>
+                            <p id="statTotalUsers" class="gradient-text m-0" style="font-size:2.5rem; font-weight:bold;">0</p>
+                        </div>
+                        <div class="stat-card glass-card p-4 text-center" style="border-radius: 16px;">
+                            <h3 class="text-secondary" style="font-size:1rem;">Profile Views</h3>
+                            <p id="statTotalViews" class="gradient-text m-0" style="font-size:2.5rem; font-weight:bold;">0</p>
+                        </div>
+                        <div class="stat-card glass-card p-4 text-center" style="border-radius: 16px;">
+                            <h3 class="text-secondary" style="font-size:1rem;">Total Editors</h3>
+                            <p id="statTotal" class="gradient-text m-0" style="font-size:2.5rem; font-weight:bold;">0</p>
+                        </div>
+                        <div class="stat-card glass-card p-4 text-center" style="border-radius: 16px;">
+                            <h3 class="text-secondary" style="font-size:1rem;">Featured</h3>
+                            <p id="statFeatured" class="gradient-text m-0" style="font-size:2.5rem; font-weight:bold;">0</p>
+                        </div>
                     </div>
                 </div>
 
-                <div class="table-responsive mb-4">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>Photo</th>
-                                <th>Name</th>
-                                <th>Category</th>
-                                <th>Price</th>
-                                <th>Views</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adminEditorsList"></tbody>
-                    </table>
-                </div>
-
-                <div class="admin-header-actions mb-3 mt-5" style="display: flex; justify-content: space-between; align-items: center;">
-                    <h2>Job Applications</h2>
-                </div>
-                <div class="table-responsive">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>Photo</th>
-                                <th>User/Name</th>
-                                <th>Category</th>
-                                <th>Price</th>
-                                <th>Applied On</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adminJobAppsList">
-                            <tr>
-                                <td colspan="6" class="text-center text-secondary text-sm">No new applications.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="admin-header-actions mb-3 mt-5" style="display: flex; justify-content: space-between; align-items: center;">
-                    <h2>Registered Users</h2>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="adminIdCheckerInput" class="form-control" placeholder="Enter 8-char ID" style="max-width: 200px;">
-                        <button class="btn secondary" id="adminIdCheckerBtn">Check ID</button>
+                <!-- Tab: Manage Editors -->
+                <div id="adminTabEditors" class="admin-tab-content" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2>Manage Editors</h2>
+                        <button class="btn primary" id="addNewEditorBtn">+ Add New Editor</button>
+                    </div>
+                    <div class="table-responsive glass-card" style="border-radius: 16px; padding: 20px;">
+                        <table class="admin-table w-100">
+                            <thead>
+                                <tr>
+                                    <th>Photo</th>
+                                    <th>Name</th>
+                                    <th>Category</th>
+                                    <th>Price</th>
+                                    <th>Views</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminEditorsList"></tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="table-responsive">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>Photo</th>
-                                <th>Name</th>
-                                <th>Email/UID</th>
-                                <th>Phone</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adminUsersList">
-                        </tbody>
-                    </table>
+
+                <!-- Tab: Featured Profiles Management -->
+                <div id="adminTabFeatured" class="admin-tab-content" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2>Featured Profile Management</h2>
+                        <button class="btn primary" id="assignFeaturedBtn">+ Assign Featured Profile</button>
+                    </div>
+                    <div class="table-responsive glass-card" style="border-radius: 16px; padding: 20px;">
+                        <table class="admin-table w-100">
+                            <thead>
+                                <tr>
+                                    <th>Editor</th>
+                                    <th>Type</th>
+                                    <th>Assigned On</th>
+                                    <th>Expires On</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminFeaturedList">
+                                <tr><td colspan="6" class="text-center text-secondary">No featured profiles managed.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
+                <!-- Tab: Job Applications -->
+                <div id="adminTabApplications" class="admin-tab-content" style="display: none;">
+                    <h2 class="mb-4">Job Applications</h2>
+                    <div class="table-responsive glass-card" style="border-radius: 16px; padding: 20px;">
+                        <table class="admin-table w-100">
+                            <thead>
+                                <tr>
+                                    <th>Photo</th>
+                                    <th>User/Name</th>
+                                    <th>Category</th>
+                                    <th>Price</th>
+                                    <th>Applied On</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminJobAppsList">
+                                <tr><td colspan="6" class="text-center text-secondary text-sm">No new applications.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab: AI Assistant -->
+                <div id="adminTabAi_assistant" class="admin-tab-content" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2>✨ AI Studio</h2>
+                    </div>
+
+                    <div class="ai-studio-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                        
+                        <!-- Image Generator Card -->
+                        <div class="glass-card" style="border-radius: 16px; padding: 20px;">
+                            <h3 class="mb-3">Image Generator</h3>
+                            <p class="text-sm text-secondary mb-3">Generate high-quality backgrounds and profile covers.</p>
+                            
+                            <div class="form-group">
+                                <label>Image Prompt</label>
+                                <textarea id="aiImagePrompt" class="form-control" rows="3" placeholder="A futuristic city cyberpunk neon lighting photorealistic..." style="padding:10px; width:100%; border-radius:8px; background:rgba(0,0,0,0.5); border:1px solid var(--glass-border); color:white;"></textarea>
+                            </div>
+                            
+                            <div class="form-group text-sm">
+                                <label>Aspect Ratio</label>
+                                <select id="aiImageAspectRatio" class="form-control" style="padding:10px; width:100%; border-radius:8px; background:rgba(0,0,0,0.5); border:1px solid var(--glass-border); color:white;">
+                                    <option value="1024x1024">1:1 Square (1024x1024)</option>
+                                    <option value="1280x720">16:9 Landscape (1280x720)</option>
+                                    <option value="720x1280">9:16 Portrait (720x1280)</option>
+                                    <option value="1440x600">21:9 Ultra Wide / Banner (1440x600)</option>
+                                </select>
+                            </div>
+                            
+                            <button id="aiGenerateImageBtn" class="btn primary w-100 mt-2">Generate Image</button>
+                            
+                            <div id="aiImageLoading" style="display:none; text-align:center; padding: 20px;">
+                                <div class="loader" style="margin: 0 auto; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                <p class="text-sm mt-2 text-secondary">Generating...</p>
+                            </div>
+
+                            <div id="aiImageResultContainer" style="display:none; margin-top: 15px;">
+                                <img id="aiGeneratedImage" src="" style="width: 100%; border-radius: 8px; border: 1px solid var(--glass-border); box-shadow: 0 4px 15px rgba(0,0,0,0.3);" />
+                                <div style="display:flex; gap:10px; margin-top: 10px;">
+                                    <button class="btn secondary flex-1" id="aiImageDownloadBtn">Download Image</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Job Application AI Assistant Card -->
+                        <div class="glass-card" style="border-radius: 16px; padding: 20px;">
+                            <h3 class="mb-3">Application Enhancer</h3>
+                            <p class="text-sm text-secondary mb-3">Fix grammar, suggest better tags, and rewrite bios professionally before publishing.</p>
+                            
+                            <div class="form-group">
+                                <label>Select Pending Application</label>
+                                <select id="aiJobAppSelect" class="form-control" style="padding:10px; width:100%; border-radius:8px; background:rgba(0,0,0,0.5); border:1px solid var(--glass-border); color:white;">
+                                    <option value="">-- Choose an application --</option>
+                                </select>
+                            </div>
+                            
+                            <div id="aiJobAppWorkspace" style="display:none;">
+                                <div class="p-3 mb-3" style="background:rgba(255,255,255,0.05); border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                                    <strong class="d-block mb-1 text-sm text-secondary">Original Bio</strong>
+                                    <p id="aiOriginalBio" class="text-xs mb-2" style="max-height: 80px; overflow-y:auto;"></p>
+                                    
+                                    <strong class="d-block mb-1 text-sm text-secondary mt-2">Original Tags</strong>
+                                    <p id="aiOriginalTags" class="text-xs"></p>
+                                </div>
+                                
+                                <button id="aiEnhanceContentBtn" class="btn warning w-100 mb-3" style="font-weight:bold;">
+                                    ✨ Automatically Rewrite Professionally
+                                </button>
+                                
+                                <div id="aiTextLoading" style="display:none; text-align:center; padding: 20px;">
+                                    <div class="loader" style="margin: 0 auto; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                    <p class="text-sm mt-2 text-secondary">Analyzing & Rewriting...</p>
+                                </div>
+
+                                <div id="aiEnhancedWorkspace" style="display:none;">
+                                    <div class="form-group">
+                                        <label>Enhanced Bio</label>
+                                        <textarea id="aiEnhancedBio" class="form-control" rows="5" style="padding:10px; width:100%; border-radius:8px; background:rgba(0,0,0,0.5); border:1px solid var(--glass-border); color:white;"></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Enhanced Tags (Comma separated)</label>
+                                        <input type="text" id="aiEnhancedTags" class="form-control" style="padding:10px; width:100%; border-radius:8px; background:rgba(0,0,0,0.5); border:1px solid var(--glass-border); color:white;">
+                                    </div>
+                                    <button id="aiSaveAndApproveBtn" class="btn success w-100 mt-2">Save Changes & Approve Application</button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Tab: Registered Users -->
+                <div id="adminTabUsers" class="admin-tab-content" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2>Registered Users</h2>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="adminIdCheckerInput" class="form-control" placeholder="Enter 8-char ID" style="max-width: 200px; padding: 10px; border-radius: 8px;">
+                            <button class="btn secondary" id="adminIdCheckerBtn">Check ID</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive glass-card" style="border-radius: 16px; padding: 20px;">
+                        <table class="admin-table w-100">
+                            <thead>
+                                <tr>
+                                    <th>Photo</th>
+                                    <th>Name</th>
+                                    <th>Email/UID</th>
+                                    <th>Phone</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminUsersList"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab: Super Admin -->
+                <div id="adminTabSuperadmin" class="admin-tab-content" style="display: none;">
+                    <div id="superadminAuthSection" style="max-width: 400px; margin: 50px auto; text-align: center;" class="glass-card p-5">
+                        <h2 class="mb-4 text-warning">Developer Access Only</h2>
+                        <p class="text-secondary mb-4">Enter the master password to manage platform administrators.</p>
+                        <input type="password" id="superadminPassword" class="form-control mb-3 text-center" placeholder="Master Password" style="padding: 12px; border-radius: 8px;">
+                        <button class="btn primary w-100" id="superadminLoginBtn" style="padding: 12px;">Unlock Access</button>
+                        <p id="superadminErrorMsg" class="text-danger mt-3" style="display:none; font-weight: 500;">Incorrect Password</p>
+                    </div>
+
+                    <div id="superadminContentSection" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2>Admin Management</h2>
+                            <button class="btn primary" id="addNewAdminBtn">+ Add New Admin</button>
+                        </div>
+                        <div class="table-responsive glass-card" style="border-radius: 16px; padding: 20px;">
+                            <table class="admin-table w-100">
+                                <thead>
+                                    <tr>
+                                        <th>Admin Email</th>
+                                        <th>Added On</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminManagersList">
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -907,6 +1169,56 @@
         </div>
     </div>
 
+    <!-- Manage Featured Editor Modal (Admin) -->
+    <div class="modal-overlay" id="featuredManagerModal" style="display: none; z-index: 2000;">
+        <div class="modal-card small-modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>Assign Featured Profile</h3>
+                <span class="close" id="closeFeaturedManager">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="featuredForm">
+                    <input type="hidden" id="featuredEditorId">
+                    
+                    <div class="form-group mb-3">
+                        <label>Select Editor</label>
+                        <select id="featuredEditorSelect" class="w-100" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                            <option value="">Select an editor...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label>Featured Type</label>
+                        <select id="featuredType" class="w-100" style="padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                            <option value="golden">Golden Profile (★)</option>
+                            <option value="best">Best Editor's Choice (⭐)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group mb-4">
+                        <label>Expiration</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="number" id="featuredDurationValue" value="30" min="1" style="flex: 1; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                            <select id="featuredDurationUnit" style="flex: 1; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                                <option value="hours">Hours</option>
+                                <option value="days" selected>Days</option>
+                                <option value="months">Months</option>
+                                <option value="permanent">Permanent</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+                <div class="form-actions text-right" style="display: flex; justify-content: space-between;">
+                    <button class="btn danger" id="revokeFeaturedBtn" style="display: none;">Revoke Status</button>
+                    <div>
+                        <button class="btn secondary mr-2" id="cancelFeaturedManager">Cancel</button>
+                        <button class="btn primary" id="saveFeaturedBtn">Apply Featured</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Admin User Profile Modal -->
     <div class="modal-overlay" id="adminUserProfileModal" style="display: none; z-index: 2000;">
         <div class="modal-card small-modal">
@@ -922,6 +1234,44 @@
                 <p class="text-xs text-secondary mb-2" id="adminUpId" style="word-break: break-all;"></p>
                 <p class="text-xs text-danger mb-3" style="font-family: monospace;">Login Password: [Hidden by Firebase Security]</p>
                 <button class="btn primary w-100 mt-2" onclick="document.getElementById('adminUserProfileModal').style.display='none'">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Admin Modal -->
+    <div class="modal-overlay" id="addAdminManagerModal" style="display: none; z-index: 2000;">
+        <div class="modal-card small-modal">
+            <div class="modal-header">
+                <h3>Grant Administrator Access</h3>
+                <span class="close" id="closeAddAdminManager">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p class="text-secondary mb-3">Find a user by their Profile ID or Email Address to grant them admin access.</p>
+                <div class="form-group mb-2" style="display:flex; gap:10px;">
+                    <input type="text" id="adminSearchInput" class="form-control" placeholder="User Profile ID or Email..." style="flex:1; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                    <button class="btn secondary" id="adminSearchBtn">Search</button>
+                </div>
+                
+                <div id="adminSearchResult" style="display:none; margin-top:20px; padding:15px; background: rgba(255,255,255,0.05); border-radius:12px; text-align:center;">
+                    <img id="adminSearchAvatar" src="" style="width:60px; height:60px; border-radius:50%; border:2px solid var(--primary); margin-bottom:10px;">
+                    <h4 id="adminSearchName" style="margin-bottom:5px;"></h4>
+                    <p id="adminSearchEmail" class="text-secondary text-sm"></p>
+                    <button class="btn warning w-100 mt-3" id="confirmAddAdminBtn">Grant Admin Access</button>
+                </div>
+                <p id="adminSearchError" class="text-danger text-sm mt-2 text-center" style="display:none;">User not found.</p>
+
+                <hr style="margin:20px 0; border:1px solid var(--glass-border);">
+                
+                <p class="text-secondary mb-3 mt-3 text-sm">Or create a brand new account for an Admin.</p>
+                <div class="form-group mb-3">
+                    <input type="email" id="newAdminEmail" class="form-control" placeholder="New Admin Email" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                </div>
+                <div class="form-group mb-4">
+                    <input type="password" id="newAdminPassword" class="form-control" placeholder="Minimum 6 characters" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 8px;">
+                </div>
+                <div class="text-right">
+                    <button class="btn primary w-100" id="createNewAdminBtn">Create New Admin Account</button>
+                </div>
             </div>
         </div>
     </div>
