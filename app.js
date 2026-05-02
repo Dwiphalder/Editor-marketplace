@@ -2,6 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebas
 import { getDatabase, ref, get, push, set, update, remove, onValue } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, RecaptchaVerifier, signInWithPhoneNumber, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { GoogleGenAI } from "@google/genai";
 
 // Firebase Configuration from User
 const firebaseConfig = {
@@ -21,6 +22,8 @@ const db = getDatabase(app);
 const storage = getStorage(app);
 const auth = getAuth(app);
 
+window.DEFAULT_AVATAR = "data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'%3e%3c/path%3e%3ccircle cx='12' cy='7' r='4'%3e%3c/circle%3e%3c/svg%3e";
+
 // Handle redirect returns from standalone/mobile logins
 getRedirectResult(auth).then((result) => {
     if (result && window.loginPromptModal) result.loginPromptModal.style.display = 'none';
@@ -34,7 +37,8 @@ let userSettings = JSON.parse(localStorage.getItem('lumina_settings')) || {
     accent: '#3b82f6',
     font: 'sanfrancisco',
     animations: true,
-    sounds: true
+    sounds: true,
+    lowEnd: false
 };
 applySettings();
 
@@ -62,10 +66,16 @@ function applySettings() {
     }
 
     // Apply animations
-    if (!userSettings.animations) {
+    if (!userSettings.animations || userSettings.lowEnd) {
         document.body.classList.add('no-animations');
     } else {
         document.body.classList.remove('no-animations');
+    }
+
+    if (userSettings.lowEnd) {
+        document.body.classList.add('low-end-mode');
+    } else {
+        document.body.classList.remove('low-end-mode');
     }
     
     // Set UI selects (if they exist)
@@ -73,6 +83,7 @@ function applySettings() {
         document.getElementById('prefTheme').value = userSettings.theme;
         document.getElementById('prefFont').value = userSettings.font || 'sanfrancisco';
         document.getElementById('prefAnimations').checked = userSettings.animations;
+        document.getElementById('prefLowEnd').checked = userSettings.lowEnd;
         document.getElementById('prefSounds').checked = userSettings.sounds;
         // Set accent active states
         document.querySelectorAll('.color-btn').forEach(btn => {
@@ -284,7 +295,7 @@ onAuthStateChanged(auth, async (user) => {
                 }
             });
         }
-        userAvatar.src = profilePic || "data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'%3e%3c/path%3e%3ccircle cx='12' cy='7' r='4'%3e%3c/circle%3e%3c/svg%3e";
+        userAvatar.src = profilePic || window.DEFAULT_AVATAR;
     } else {
         currentUser = null;
         authScreen.style.display = 'flex';
@@ -344,67 +355,110 @@ if(tabSignup) tabSignup.addEventListener('click', () => {
     performTabSwitch(false);
 });
 
+let isAnimatingTab = false;
+
 async function performTabSwitch(toLogin) {
+    if (isAnimatingTab) return;
+    isAnimatingTab = true;
+
     const card = document.getElementById('auth3dCard');
     const labels = authForm.querySelectorAll('label, .text-center:not(.logo), button');
     const inputs = authForm.querySelectorAll('input');
     
+    const shouldAnimate = userSettings.animations && !userSettings.lowEnd;
+
+    // Disable inline transform for animation
+    if (card) card.style.transform = '';
+
     // Add 3d flip animation
-    if (card) {
+    if (shouldAnimate && card) {
         card.classList.remove('animate-tab-switch');
         void card.offsetWidth; // trigger reflow
         card.classList.add('animate-tab-switch');
     }
     
     // Wait for the card to be at 90 degrees (halfway point)
-    await new Promise(r => setTimeout(r, 300));
+    if (shouldAnimate) {
+        await new Promise(r => setTimeout(r, 300));
+    }
     
     isLoginMode = toLogin;
     
     if (isLoginMode) {
-        tabLogin.classList.add('active');
+        if(tabLogin) tabLogin.classList.add('active');
         if(tabSignup) tabSignup.classList.remove('active');
         if(mainAuthBtn) mainAuthBtn.textContent = 'Log In';
         if(forgotPasswordLink) forgotPasswordLink.style.display = 'block';
+        if(document.getElementById('confirmPasswordGroup')) document.getElementById('confirmPasswordGroup').style.display = 'none';
+        if(document.getElementById('authConfirmPassword')) document.getElementById('authConfirmPassword').removeAttribute('required');
     } else {
-        tabSignup.classList.add('active');
+        if(tabSignup) tabSignup.classList.add('active');
         if(tabLogin) tabLogin.classList.remove('active');
         if(mainAuthBtn) mainAuthBtn.textContent = 'Sign Up';
         if(forgotPasswordLink) forgotPasswordLink.style.display = 'none';
+        if(document.getElementById('confirmPasswordGroup')) document.getElementById('confirmPasswordGroup').style.display = 'block';
+        if(document.getElementById('authConfirmPassword')) document.getElementById('authConfirmPassword').setAttribute('required', 'true');
     }
     
     if(authForm) authForm.reset();
     if(authErrorMsg) authErrorMsg.classList.add('hidden');
     
-    // Add falling animation to text elements
-    labels.forEach((el, index) => {
-        el.classList.remove('animate-text-drop');
-        void el.offsetWidth;
-        el.style.animationDelay = `${index * 0.05}s`;
-        el.classList.add('animate-text-drop');
-    });
-    inputs.forEach((el, index) => {
-        el.classList.remove('animate-text-drop');
-        void el.offsetWidth;
-        el.style.animationDelay = `${(labels.length + index) * 0.05}s`;
-        el.classList.add('animate-text-drop');
-    });
-    
-    // Remove the flip class after animation completes
-    setTimeout(() => {
-        if (card) card.classList.remove('animate-tab-switch');
-    }, 350);
+    if (shouldAnimate) {
+        // Add falling animation to text elements
+        labels.forEach((el, index) => {
+            el.classList.remove('animate-text-drop');
+            void el.offsetWidth;
+            el.style.animationDelay = `${index * 0.05}s`;
+            el.classList.add('animate-text-drop');
+        });
+        inputs.forEach((el, index) => {
+            el.classList.remove('animate-text-drop');
+            void el.offsetWidth;
+            el.style.animationDelay = `${(labels.length + index) * 0.05}s`;
+            el.classList.add('animate-text-drop');
+        });
+        
+        // Remove the flip class after animation completes
+        setTimeout(() => {
+            if (card) card.classList.remove('animate-tab-switch');
+            isAnimatingTab = false;
+        }, 350);
+    } else {
+        isAnimatingTab = false;
+    }
 }
+
+const showCustomToast = (msg, isAnim1) => {
+    const toast = document.getElementById('customToast');
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.className = 'custom-toast'; // reset
+    void toast.offsetWidth; // trigger reflow
+    toast.classList.add(isAnim1 ? 'toast-anim-1' : 'toast-anim-2');
+};
 
 // Email/Password login logic
 if(authForm) authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email = document.getElementById('authEmail').value;
+    const email = document.getElementById('authEmail').value.trim();
     const pass = document.getElementById('authPassword').value;
+    
+    if (!email.toLowerCase().endsWith('@gmail.com')) {
+        showCustomToast("Please enter a valid @gmail.com address!", true);
+        return;
+    }
+
+    if (!isLoginMode) {
+        const confirmPass = document.getElementById('authConfirmPassword').value;
+        if (pass !== confirmPass) {
+            showCustomToast("Passwords do not match!", false);
+            return;
+        }
+    }
     
     mainAuthBtn.disabled = true;
     mainAuthBtn.textContent = 'Please Wait...';
-    authErrorMsg.classList.add('hidden');
+    if(authErrorMsg) authErrorMsg.classList.add('hidden');
     
     try {
         if(isLoginMode) {
@@ -417,16 +471,15 @@ if(authForm) authForm.addEventListener('submit', async (e) => {
         console.error("Auth error:", err);
         let msg = err.message.replace('Firebase:', '').trim();
         if (err.code === 'auth/network-request-failed') {
-            msg = "Network request failed. If you are in the preview window, please click 'Open in new tab' (top right). Also ensure third-party cookies are not blocked and disable ad-blockers.";
+            msg = "Network request failed. If you are in the preview window, please click 'Open in new tab' (top right).";
         } else if (err.code === 'auth/invalid-credential') {
-            msg = "Invalid email or password. If you haven't created an account with this email and password yet, please switch to 'Sign Up' first. If you signed up with Google, please use 'Continue with Google'.";
+            msg = "Invalid email or password.";
         } else if (err.code === 'auth/email-already-in-use') {
-            msg = "This email is already registered. Please switch to 'Log In' or use 'Continue with Google'.";
+            msg = "This email is already registered. Switch to 'Log In'.";
         } else if (err.code === 'auth/operation-not-allowed') {
-            msg = "Email/Password login is not enabled. Please enable it in Firebase Console -> Authentication -> Sign-in method.";
+            msg = "Email/Password login is not enabled.";
         }
-        authErrorMsg.textContent = msg;
-        authErrorMsg.classList.remove('hidden');
+        showCustomToast(msg, true);
     } finally {
         mainAuthBtn.disabled = false;
         mainAuthBtn.textContent = isLoginMode ? 'Log In' : 'Sign Up';
@@ -460,8 +513,7 @@ if(forgotPasswordLink) {
         
         const email = document.getElementById('authEmail').value.trim();
         if(!email) {
-            authErrorMsg.textContent = "Please enter your email address first, then click 'Forgotten password?'.";
-            authErrorMsg.classList.remove('hidden');
+            showCustomToast("Please enter your email address first, then click 'Forgotten password?'.", false);
             return;
         }
         try {
@@ -471,9 +523,7 @@ if(forgotPasswordLink) {
             
             await sendPasswordResetEmail(auth, email);
             
-            authErrorMsg.innerHTML = "<strong>Message Sent!</strong> A password reset link has been sent to " + email + ".";
-            authErrorMsg.style.color = '#34d399'; // Green success color
-            authErrorMsg.classList.remove('hidden');
+            showCustomToast(`Message Sent! A password reset link has been sent to ${email}.`, true);
             
             const timerInterval = setInterval(() => {
                 forgotPasswordCooldown--;
@@ -487,29 +537,20 @@ if(forgotPasswordLink) {
                 }
             }, 1000);
             
-            setTimeout(() => {
-                authErrorMsg.style.color = ''; // Reset color
-            }, 10000);
         } catch (error) {
             console.error(error);
             forgotPasswordCooldown = 0;
             forgotPasswordLink.style.opacity = '1';
             forgotPasswordLink.style.cursor = 'pointer';
             
-            authErrorMsg.textContent = error.message.replace('Firebase:', '').trim();
-            authErrorMsg.style.color = '';
-            authErrorMsg.classList.remove('hidden');
+            showCustomToast(error.message.replace('Firebase:', '').trim(), false);
         }
     });
 }
 
 const handleGoogleLogin = async (e) => {
     e.preventDefault();
-    if(authErrorMsg) {
-        authErrorMsg.textContent = "Google Login is coming soon!";
-        authErrorMsg.style.color = '#f59e0b';
-        authErrorMsg.classList.remove('hidden');
-    }
+    showCustomToast("Google Login is coming soon!", true);
 };
 
 if(document.getElementById('googleAuthBtn')) { document.getElementById('googleAuthBtn').addEventListener('click', handleGoogleLogin); }
@@ -592,9 +633,10 @@ if(bottomNavHome && bottomNavJobs && bottomNavWishlist) {
 }
 
 function populateJobFormFromProfile() {
+    const jobsMsg = document.getElementById('jobsCompleteProfileMsg');
     if(!currentUser) {
-        document.getElementById('jobsCompleteProfileMsg').classList.remove('hidden');
-        document.getElementById('submitJobReqBtn').disabled = true;
+        if(jobsMsg) jobsMsg.classList.remove('hidden');
+        if(document.getElementById('submitJobReqBtn')) document.getElementById('submitJobReqBtn').disabled = true;
         return;
     }
     const up = allUsers[currentUser.uid] || {};
@@ -602,9 +644,11 @@ function populateJobFormFromProfile() {
     // Check if user is already an editor
     const isAlreadyEditor = editors.find(e => e.userId === currentUser.uid);
     if(isAlreadyEditor) {
-        document.getElementById('jobsCompleteProfileMsg').classList.remove('hidden');
-        document.getElementById('jobsCompleteProfileMsg').innerHTML = `<p class="text-danger text-center">You already have an active job profile.</p>`;
-        document.getElementById('submitJobReqBtn').disabled = true;
+        if(jobsMsg) {
+            jobsMsg.classList.remove('hidden');
+            jobsMsg.innerHTML = `<p class="text-danger text-center">You already have an active job profile.</p>`;
+        }
+        if(document.getElementById('submitJobReqBtn')) document.getElementById('submitJobReqBtn').disabled = true;
         
         // Disable form fields
         ['jobName', 'jobEmail', 'jobPhone', 'jobCategory', 'jobStyle', 'jobPrice', 'jobMaxPrice', 'jobExperience', 'jobSkills', 'jobTools', 'jobBio', 'jobVideoClips', 'jobPortfolio'].forEach(id => {
@@ -615,7 +659,7 @@ function populateJobFormFromProfile() {
         if(urlEl) urlEl.disabled = true;
         return;
     } else {
-        document.getElementById('jobsCompleteProfileMsg').innerHTML = `<p class="text-danger">Please <button class="btn btn-sm primary" onclick="window.openUserProfileModal(true)">Complete Profile</button> first. It's required for applying.</p>`;
+        if(jobsMsg) jobsMsg.innerHTML = `<p class="text-danger">Please <button class="btn btn-sm primary" onclick="window.openUserProfileModal(true)">Complete Profile</button> first. It's required for applying.</p>`;
         // Enable form fields just in case
         ['jobName', 'jobEmail', 'jobPhone', 'jobCategory', 'jobStyle', 'jobPrice', 'jobMaxPrice', 'jobExperience', 'jobSkills', 'jobTools', 'jobBio', 'jobVideoClips', 'jobPortfolio'].forEach(id => {
             const el = document.getElementById(id);
@@ -625,13 +669,13 @@ function populateJobFormFromProfile() {
         if(urlEl) urlEl.disabled = false;
     }
 
-    document.getElementById('jobsCompleteProfileMsg').classList.add('hidden');
-    document.getElementById('submitJobReqBtn').disabled = false;
+    if(jobsMsg) jobsMsg.classList.add('hidden');
+    if(document.getElementById('submitJobReqBtn')) document.getElementById('submitJobReqBtn').disabled = false;
     document.getElementById('jobName').value = up.firstName ? (up.firstName + ' ' + (up.lastName||'').trim()) : '';
     document.getElementById('jobEmail').value = currentUser.email || '';
     document.getElementById('jobPhone').value = up.phone || '';
     
-    const defaultPic = up.photoUrl || currentUser.photoURL || 'https://via.placeholder.com/80';
+    const defaultPic = up.photoUrl || currentUser.photoURL || window.DEFAULT_AVATAR;
     const avatarPrev = document.getElementById('jobAvatarPreview');
     if(!document.getElementById('jobAvatarUrl').value) {
         avatarPrev.src = defaultPic;
@@ -642,10 +686,19 @@ function populateJobFormFromProfile() {
 
 // Fetch Data
 async function fetchEditors() {
-    if(loadingMain) loadingMain.style.display = 'block';
     if(emptyMain) emptyMain.style.display = 'none';
-    if(mainGrid) mainGrid.innerHTML = '';
     
+    // Show Skeletons
+    const skeletonHTML = Array(8).fill(null).map(() => generateSkeletonHTML()).join('');
+    if(mainGrid) mainGrid.innerHTML = skeletonHTML;
+    if(trendingGrid) trendingGrid.innerHTML = Array(4).fill(null).map(() => generateSkeletonHTML()).join('');
+    
+    const goldenGrid = document.getElementById('goldenGrid');
+    if(goldenGrid) goldenGrid.innerHTML = Array(4).fill(null).map(() => generateSkeletonHTML()).join('');
+    
+    const bestGrid = document.getElementById('bestEditorsGrid');
+    if(bestGrid) bestGrid.innerHTML = Array(4).fill(null).map(() => generateSkeletonHTML()).join('');
+
     try {
         const [editorsSnap, requestsSnap, reviewsSnap, usersSnap, appsSnap] = await Promise.all([
             get(ref(db, "editors")),
@@ -707,6 +760,30 @@ function refreshCurrentFeeds() {
     } else {
         renderHomeFeeds();
     }
+}
+
+function generateSkeletonHTML() {
+    return `
+        <div class="skeleton-card">
+            <div class="skeleton-bg skeleton-box"></div>
+            <div class="card-content">
+                <div class="skeleton-name skeleton-box"></div>
+                <div class="skeleton-title skeleton-box"></div>
+                <div class="skeleton-reviews skeleton-box"></div>
+                
+                <div class="skeleton-thumbs">
+                    <div class="skeleton-thumb skeleton-box"></div>
+                    <div class="skeleton-thumb skeleton-box"></div>
+                    <div class="skeleton-thumb skeleton-box"></div>
+                </div>
+                
+                <div class="skeleton-actions">
+                    <div class="skeleton-btn skeleton-box"></div>
+                    <div class="skeleton-btn skeleton-box"></div>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 // Render Logic
@@ -1207,7 +1284,7 @@ function openEditorProfile(id) {
         }
     }
     
-    document.getElementById('epAvatar').src = ed.photo_url || 'https://via.placeholder.com/150';
+    document.getElementById('epAvatar').src = ed.photo_url || window.DEFAULT_AVATAR;
     document.getElementById('epName').textContent = ed.name;
     document.getElementById('epCategory').textContent = ed.category;
     
@@ -1472,17 +1549,19 @@ window.openUserProfileModal = function(showMustComplete = false) {
     document.getElementById('upPhone').value = up.phone || '';
     document.getElementById('upEmail').value = currentUser.email;
     document.getElementById('upAvatarUrl').value = up.photoUrl || '';
-    document.getElementById('upAvatarPreview').src = up.photoUrl || currentUser.photoURL || 'https://via.placeholder.com/80';
+    document.getElementById('upAvatarPreview').src = up.photoUrl || currentUser.photoURL || window.DEFAULT_AVATAR;
     
     // Set up Short ID
     if(document.getElementById('userShortId')) {
         document.getElementById('userShortId').textContent = 'ID: ' + currentUser.uid.substring(0, 8).toUpperCase();
     }
 
-    if(showMustComplete) {
-        profileCompleteMsg.classList.remove('hidden');
-    } else {
-        profileCompleteMsg.classList.add('hidden');
+    if(profileCompleteMsg) {
+        if(showMustComplete) {
+            profileCompleteMsg.classList.remove('hidden');
+        } else {
+            profileCompleteMsg.classList.add('hidden');
+        }
     }
     
     // Job Profile Section
@@ -1758,7 +1837,7 @@ window.viewAdminRequests = function(editorId) {
             const reqUser = allUsers[r.userId] || {};
             const userName = reqUser.firstName ? (reqUser.firstName + ' ' + (reqUser.lastName||'')).trim() : 'Unknown Name';
             const userPhone = reqUser.phone || 'No phone provided';
-            const userPhoto = reqUser.photoUrl || 'https://via.placeholder.com/60';
+            const userPhoto = reqUser.photoUrl || window.DEFAULT_AVATAR;
 
             const div = document.createElement('div');
             div.className = 'glass-card mb-3 p-3';
@@ -1888,7 +1967,8 @@ document.getElementById('closeLoginPrompt').addEventListener('click', () => { lo
 
 // 3D Hover Effect
 document.addEventListener('mousemove', (e) => {
-    if(!userSettings.animations) return;
+    if(!userSettings.animations || userSettings.lowEnd) return;
+    if(typeof isAnimatingTab !== 'undefined' && isAnimatingTab) return;
     const card = document.getElementById('auth3dCard');
     if(!card) return;
     
@@ -1975,6 +2055,7 @@ if(document.getElementById('saveSettingsBtn')) document.getElementById('saveSett
     userSettings.font = document.getElementById('prefFont').value;
     userSettings.animations = document.getElementById('prefAnimations').checked;
     userSettings.sounds = document.getElementById('prefSounds').checked;
+    userSettings.lowEnd = document.getElementById('prefLowEnd').checked;
     
     localStorage.setItem('lumina_settings', JSON.stringify(userSettings));
     applySettings();
@@ -2001,13 +2082,14 @@ if(appVersionTracker) appVersionTracker.addEventListener('click', () => {
 if(document.getElementById('closeAdminPin')) document.getElementById('closeAdminPin').addEventListener('click', () => { adminPinModal.style.display = 'none'; });
 if(document.getElementById('verifyPinBtn')) document.getElementById('verifyPinBtn').addEventListener('click', () => {
     const pin = document.getElementById('adminPinInput').value;
+    const pinErr = document.getElementById('adminPinError');
     if (pin === 'admin123') { // Hidden password
         adminPinModal.style.display = 'none';
         document.getElementById('adminPinInput').value = '';
-        document.getElementById('adminPinError').classList.add('hidden');
+        if(pinErr) pinErr.classList.add('hidden');
         openAdminPanel();
     } else {
-        document.getElementById('adminPinError').classList.remove('hidden');
+        if(pinErr) pinErr.classList.remove('hidden');
     }
 });
 
@@ -2084,7 +2166,7 @@ function renderAdminList() {
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><img src="${ed.photo_url || 'https://via.placeholder.com/40'}" class="table-img"></td>
+            <td><img src="${ed.photo_url || window.DEFAULT_AVATAR}" class="table-img"></td>
             <td><strong>${ed.name}</strong></td>
             <td><span class="category-tag">${ed.category}</span></td>
             <td>₹${ed.price}</td>
@@ -2115,7 +2197,7 @@ function renderAdminList() {
             pendingApps.forEach(app => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><img src="${app.photo_url || 'https://via.placeholder.com/40'}" class="table-img"></td>
+                    <td><img src="${app.photo_url || window.DEFAULT_AVATAR}" class="table-img"></td>
                     <td><strong>${app.name}</strong><br><span class="text-xs text-secondary">${app.email}</span></td>
                     <td><span class="category-tag">${app.category}</span></td>
                     <td>₹${app.price}</td>
@@ -2153,7 +2235,7 @@ function renderAdminList() {
                 
                 tr.innerHTML = `
                     <td style="display:flex; align-items:center; gap:10px;">
-                        <img src="${ed.photo_url || 'https://via.placeholder.com/40'}" class="table-img">
+                        <img src="${ed.photo_url || window.DEFAULT_AVATAR}" class="table-img">
                         <strong>${ed.name}</strong>
                     </td>
                     <td>${typeBadge}</td>
@@ -2181,7 +2263,7 @@ function renderAdminList() {
                 const tr = document.createElement('tr');
                 const fullName = u.firstName ? (u.firstName + ' ' + (u.lastName || '')).trim() : 'Anonymous';
                 tr.innerHTML = `
-                    <td><img src="${u.photoUrl || 'https://via.placeholder.com/40'}" class="table-img"></td>
+                    <td><img src="${u.photoUrl || window.DEFAULT_AVATAR}" class="table-img"></td>
                     <td><strong>${fullName}</strong></td>
                     <td><span class="text-xs text-secondary">${uid}</span></td>
                     <td>${u.phone || '-'}</td>
@@ -2198,7 +2280,7 @@ function renderAdminList() {
 window.viewAdminUserProfile = function(uid) {
     const u = allUsers[uid];
     if (!u) return;
-    document.getElementById('adminUpAvatar').src = u.photoUrl || 'https://via.placeholder.com/100';
+    document.getElementById('adminUpAvatar').src = u.photoUrl || window.DEFAULT_AVATAR;
     document.getElementById('adminUpName').textContent = u.firstName ? (u.firstName + ' ' + (u.lastName || '')).trim() : 'Anonymous User';
     document.getElementById('adminUpEmail').textContent = u.email || 'No email';
     document.getElementById('adminUpPhone').textContent = u.phone || 'No phone';
@@ -2986,7 +3068,7 @@ function renderJobDashboard() {
     uniqueClientIds.forEach(clientId => {
         const u = allUsers[clientId] || {};
         const name = u.firstName ? (u.firstName + ' ' + (u.lastName || '')).trim() : 'Anonymous';
-        const photo = u.photoUrl || 'https://via.placeholder.com/60';
+        const photo = u.photoUrl || window.DEFAULT_AVATAR;
         
         const div = document.createElement('div');
         div.className = 'glass-card p-3';
@@ -3111,7 +3193,7 @@ if (sendSupportMsgBtn && supportChatInput) {
                 unreadAdmin: (allSupportChats[currentUser.uid]?.unreadAdmin || 0) + 1,
                 userId: currentUser.uid,
                 userName: up.firstName ? (up.firstName + ' ' + (up.lastName || '')).trim() : 'Anonymous',
-                userPhoto: up.photoUrl || 'https://via.placeholder.com/40'
+                userPhoto: up.photoUrl || window.DEFAULT_AVATAR
             });
         } catch(e) {
             console.error("Failed to send message", e);
@@ -3251,7 +3333,7 @@ function renderAdminSupportUsersList() {
         div.onmouseover = () => { if(!isActive) div.style.background = 'rgba(255,255,255,0.02)'; };
         div.onmouseout = () => { if(!isActive) div.style.background = 'transparent'; };
         
-        const photo = ch.userPhoto || 'https://via.placeholder.com/40';
+        const photo = ch.userPhoto || window.DEFAULT_AVATAR;
         const name = ch.userName || 'Anonymous';
         const unreadBadge = (ch.unreadAdmin > 0) ? `<span style="background:red; color:white; border-radius:50%; width:20px; height:20px; font-size:12px; display:flex; align-items:center; justify-content:center;">${ch.unreadAdmin}</span>` : '';
         
@@ -3482,7 +3564,7 @@ if (document.getElementById('adminSearchBtn')) {
         
         if (foundUid && foundData) {
             window.foundAdminCandidate = { uid: foundUid, email: foundData.email, name: foundData.firstName + ' ' + foundData.lastName };
-            document.getElementById('adminSearchAvatar').src = foundData.photoUrl || 'https://via.placeholder.com/60';
+            document.getElementById('adminSearchAvatar').src = foundData.photoUrl || window.DEFAULT_AVATAR;
             document.getElementById('adminSearchName').textContent = foundData.firstName + ' ' + foundData.lastName;
             document.getElementById('adminSearchEmail').textContent = foundData.email;
             document.getElementById('adminSearchResult').style.display = 'block';
@@ -3832,4 +3914,165 @@ window.aiDirectApproveJobApp = async (appId) => {
     
     renderAdminList();
 };
+
+// ============================================
+// AI Support Chat & Draggable FAB Logic
+// ============================================
+const aiSupportFab = document.getElementById('aiSupportFab');
+const aiSupportChatModal = document.getElementById('aiSupportChatModal');
+const closeAiSupportChat = document.getElementById('closeAiSupportChat');
+const aiSupportChatContainer = document.getElementById('aiSupportChatContainer');
+const aiSupportChatInput = document.getElementById('aiSupportChatInput');
+const sendAiSupportMessageBtn = document.getElementById('sendAiSupportMessageBtn');
+
+let ai;
+try {
+    ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+} catch(e) {
+    console.warn("Failed to initialize GoogleGenAI", e);
+}
+
+const chatHistory = [
+    { role: 'model', parts: [{ text: "Hi there! I'm Lumina AI, your virtual assistant. How can I help you today?" }] }
+];
+let ongoingAiChat = null;
+
+if (aiSupportFab) {
+    // Draggable logic for FAB
+    let isDragging = false;
+    let startX, startY, initialX, initialY;
+
+    const onMove = (moveEvent) => {
+        const clientX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
+        const clientY = moveEvent.touches ? moveEvent.touches[0].clientY : moveEvent.clientY;
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+            isDragging = true;
+        }
+        if (isDragging) {
+            aiSupportFab.style.right = 'auto';
+            aiSupportFab.style.bottom = 'auto';
+            aiSupportFab.style.left = (initialX + dx) + 'px';
+            aiSupportFab.style.top = (initialY + dy) + 'px';
+            if (moveEvent.cancelable) moveEvent.preventDefault(); // Prevent scrolling on mobile
+        }
+    };
+
+    const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onUp);
+    };
+
+    const onDown = (e) => {
+        isDragging = false;
+        startX = e.touches ? e.touches[0].clientX : e.clientX;
+        startY = e.touches ? e.touches[0].clientY : e.clientY;
+        const rect = aiSupportFab.getBoundingClientRect();
+        initialX = rect.left;
+        initialY = rect.top;
+
+        document.addEventListener('mousemove', onMove, {passive: false});
+        document.addEventListener('mouseup', onUp);
+        document.addEventListener('touchmove', onMove, {passive: false});
+        document.addEventListener('touchend', onUp);
+    };
+
+    aiSupportFab.addEventListener('mousedown', onDown);
+    aiSupportFab.addEventListener('touchstart', onDown, {passive: false});
+
+    aiSupportFab.addEventListener('click', (e) => {
+        if (!isDragging) {
+            aiSupportChatModal.style.display = 'flex';
+        }
+    });
+}
+
+if (closeAiSupportChat) {
+    closeAiSupportChat.addEventListener('click', () => {
+        aiSupportChatModal.style.display = 'none';
+    });
+}
+
+function appendAiMessage(text, isUser = false) {
+    const msgDiv = document.createElement('div');
+    msgDiv.style.background = isUser ? 'var(--primary)' : 'var(--glass-card)';
+    msgDiv.style.padding = '10px 15px';
+    msgDiv.style.borderRadius = '12px';
+    msgDiv.style.alignSelf = isUser ? 'flex-end' : 'flex-start';
+    msgDiv.style.maxWidth = '80%';
+    msgDiv.style.marginTop = '10px';
+    msgDiv.style.color = 'white';
+    msgDiv.style.wordBreak = 'break-word';
+    msgDiv.textContent = text;
+    aiSupportChatContainer.appendChild(msgDiv);
+    aiSupportChatContainer.scrollTop = aiSupportChatContainer.scrollHeight;
+    return msgDiv;
+}
+
+async function handleAiSubmit() {
+    const text = aiSupportChatInput.value.trim();
+    if (!text) return;
+    
+    appendAiMessage(text, true);
+    aiSupportChatInput.value = '';
+    
+    if (!ai) {
+        appendAiMessage("Sorry, the AI is not configured correctly.");
+        return;
+    }
+
+    if (!ongoingAiChat) {
+        ongoingAiChat = ai.chats.create({
+            model: "gemini-3-flash-preview",
+            config: {
+                systemInstruction: "You are Lumina AI, an AI assistant created by this company to help users with the Lumina Editors app. Assist users with their problems in a friendly, helpful manner."
+            }
+        });
+    }
+
+    // Show thinking animation
+    const thinkingDiv = document.createElement('div');
+    thinkingDiv.style.background = 'var(--glass-card)';
+    thinkingDiv.style.padding = '10px 15px';
+    thinkingDiv.style.borderRadius = '12px';
+    thinkingDiv.style.alignSelf = 'flex-start';
+    thinkingDiv.style.marginTop = '10px';
+    thinkingDiv.style.color = 'var(--secondary)';
+    thinkingDiv.style.fontStyle = 'italic';
+    thinkingDiv.innerHTML = 'Thinking... <span style="display:inline-block; animation: spin 2s linear infinite;">⏳</span>';
+    aiSupportChatContainer.appendChild(thinkingDiv);
+    aiSupportChatContainer.scrollTop = aiSupportChatContainer.scrollHeight;
+
+    try {
+        let streamResponse = await ongoingAiChat.sendMessageStream({ message: text });
+        
+        thinkingDiv.remove();
+        
+        const responseDiv = appendAiMessage("", false);
+        let fullText = "";
+
+        for await (const chunk of streamResponse) {
+            fullText += (chunk.text || "");
+            responseDiv.textContent = fullText;
+            aiSupportChatContainer.scrollTop = aiSupportChatContainer.scrollHeight;
+        }
+    } catch(err) {
+        console.error(err);
+        thinkingDiv.remove();
+        appendAiMessage("Sorry, I encountered an error. Please try again later.");
+    }
+}
+
+if (sendAiSupportMessageBtn) {
+    sendAiSupportMessageBtn.addEventListener('click', handleAiSubmit);
+}
+if (aiSupportChatInput) {
+    aiSupportChatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleAiSubmit();
+    });
+}
+
 
