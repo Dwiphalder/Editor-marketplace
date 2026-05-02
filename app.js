@@ -367,10 +367,23 @@ if(togglePassword) {
 }
 
 const handleGoogleLogin = async () => {
-    // Coming soon
-    if(authErrorMsg) {
-        authErrorMsg.textContent = "Google Sign-In is coming soon!";
-        authErrorMsg.classList.remove('hidden');
+    try {
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+        if(loginPromptModal) loginPromptModal.style.display = 'none';
+        if(authErrorMsg) authErrorMsg.classList.add('hidden');
+    } catch (error) {
+        console.error("Google sign in error:", error);
+        let errorMsg = error.message || "Failed to sign in with Google.";
+        if (error.code === 'auth/unauthorized-domain') {
+            errorMsg = "Firebase Error: This domain is not authorized. Please go to Firebase Console -> Authentication -> Settings -> Authorized domains and add: " + window.location.hostname;
+        }
+        if(authErrorMsg) {
+            authErrorMsg.textContent = errorMsg;
+            authErrorMsg.classList.remove('hidden');
+        } else {
+            alert(errorMsg);
+        }
     }
 };
 
