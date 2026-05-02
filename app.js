@@ -343,7 +343,12 @@ if(authForm) authForm.addEventListener('submit', async (e) => {
         }
         loginPromptModal.style.display = 'none'; // in case it was opened from hiring
     } catch(err) {
-        authErrorMsg.textContent = err.message.replace('Firebase:', '').trim();
+        console.error("Auth error:", err);
+        let msg = err.message.replace('Firebase:', '').trim();
+        if (err.code === 'auth/network-request-failed') {
+            msg = "Network request failed. Please check your internet connection, disable any ad-blockers, and ensure third-party cookies are not blocked your browser settings.";
+        }
+        authErrorMsg.textContent = msg;
         authErrorMsg.classList.remove('hidden');
     } finally {
         mainAuthBtn.disabled = false;
@@ -377,6 +382,10 @@ const handleGoogleLogin = async () => {
         let errorMsg = error.message || "Failed to sign in with Google.";
         if (error.code === 'auth/unauthorized-domain') {
             errorMsg = "Firebase Error: This domain is not authorized. Please go to Firebase Console -> Authentication -> Settings -> Authorized domains and add: " + window.location.hostname;
+        } else if (error.code === 'auth/network-request-failed' || error.message.includes('network-request-failed')) {
+            errorMsg = "Network connection failed. If you are on a mobile browser or using an ad-blocker, please try opening the app in a new tab, or disable your ad-blocker. Also ensure third-party cookies are allowed.";
+        } else if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+            return; // Ignore this error as it just means the user cancelled the action
         }
         if(authErrorMsg) {
             authErrorMsg.textContent = errorMsg;
