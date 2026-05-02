@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
 import { getDatabase, ref, get, push, set, update, remove, onValue } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 // Firebase Configuration from User
 const firebaseConfig = {
@@ -20,6 +20,12 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const storage = getStorage(app);
 const auth = getAuth(app);
+
+// Handle redirect returns from standalone/mobile logins
+getRedirectResult(auth).then((result) => {
+    if (result && window.loginPromptModal) result.loginPromptModal.style.display = 'none';
+}).catch(err => console.error("Redirect login error:", err));
+
 const provider = new GoogleAuthProvider();
 
 // System Settings
@@ -346,7 +352,13 @@ if(authForm) authForm.addEventListener('submit', async (e) => {
         console.error("Auth error:", err);
         let msg = err.message.replace('Firebase:', '').trim();
         if (err.code === 'auth/network-request-failed') {
-            msg = "Network request failed. Please check your internet connection, disable any ad-blockers, and ensure third-party cookies are not blocked your browser settings.";
+            msg = "Network request failed. If you are in the preview window, please click 'Open in new tab' (top right). Also ensure third-party cookies are not blocked and disable ad-blockers.";
+        } else if (err.code === 'auth/invalid-credential') {
+            msg = "Invalid email or password. If you haven't created an account with this email and password yet, please switch to 'Sign Up' first. If you signed up with Google, please use 'Continue with Google'.";
+        } else if (err.code === 'auth/email-already-in-use') {
+            msg = "This email is already registered. Please switch to 'Log In' or use 'Continue with Google'.";
+        } else if (err.code === 'auth/operation-not-allowed') {
+            msg = "Email/Password login is not enabled. Please enable it in Firebase Console -> Authentication -> Sign-in method.";
         }
         authErrorMsg.textContent = msg;
         authErrorMsg.classList.remove('hidden');
@@ -373,20 +385,40 @@ if(togglePassword) {
 
 const handleGoogleLogin = async () => {
     try {
+        if (window.self !== window.top) {
+            console.warn("Attempting Google Sign-In inside an iframe. It may fail due to browser security policies.");
+        }
         const provider = new GoogleAuthProvider();
-        await signInWithPopup(auth, provider);
-        if(loginPromptModal) loginPromptModal.style.display = 'none';
-        if(authErrorMsg) authErrorMsg.classList.add('hidden');
+        provider.setCustomParameters({ prompt: 'select_account' });
+        
+        // Detect if running as standalone PWA or on a mobile device
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const inIframe = window.self !== window.top;
+
+        if (!inIframe && (isStandalone || isMobile)) {
+            // Use redirect for mobile / standalone to avoid blank screen issues
+            await signInWithRedirect(auth, provider);
+        } else {
+            // Use popup for desktop / iframe
+            await signInWithPopup(auth, provider);
+            if(loginPromptModal) loginPromptModal.style.display = 'none';
+            if(authErrorMsg) authErrorMsg.classList.add('hidden');
+        }
     } catch (error) {
         console.error("Google sign in error:", error);
         let errorMsg = error.message || "Failed to sign in with Google.";
         if (error.code === 'auth/unauthorized-domain') {
-            errorMsg = "Firebase Error: This domain is not authorized. Please go to Firebase Console -> Authentication -> Settings -> Authorized domains and add: " + window.location.hostname;
+            errorMsg = `Domain not authorized in Firebase. You MUST add: ${window.location.hostname} to Firebase Console -> Authentication -> Settings -> Authorized Domains.`;
+            alert(errorMsg); // Show an alert so the user definitely sees it
         } else if (error.code === 'auth/network-request-failed' || error.message.includes('network-request-failed')) {
-            errorMsg = "Network connection failed. If you are on a mobile browser or using an ad-blocker, please try opening the app in a new tab, or disable your ad-blocker. Also ensure third-party cookies are allowed.";
+            errorMsg = "Google Sign-In popup was blocked or failed. Please click 'Open in new tab' (top right arrow in AI Studio) to log in.";
         } else if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
             return; // Ignore this error as it just means the user cancelled the action
+        } else if (error.code === 'auth/invalid-credential') {
+            errorMsg = "Invalid credentials. Please ensure your Google account is active.";
         }
+        
         if(authErrorMsg) {
             authErrorMsg.textContent = errorMsg;
             authErrorMsg.classList.remove('hidden');
@@ -397,6 +429,127 @@ const handleGoogleLogin = async () => {
 };
 
 if(document.getElementById('googleAuthBtn')) { document.getElementById('googleAuthBtn').addEventListener('click', handleGoogleLogin); }
+
+// --- Phone Auth Logic ---
+const phoneAuthBtn = document.getElementById('phoneAuthBtn');
+const phoneAuthModal = document.getElementById('phoneAuthModal');
+const closePhoneAuth = document.getElementById('closePhoneAuth');
+const phoneInputStep = document.getElementById('phoneInputStep');
+const phoneVerifyStep = document.getElementById('phoneVerifyStep');
+const phoneNumberInput = document.getElementById('phoneNumberInput');
+const sendPhoneCodeBtn = document.getElementById('sendPhoneCodeBtn');
+const phoneCodeInput = document.getElementById('phoneCodeInput');
+const verifyPhoneCodeBtn = document.getElementById('verifyPhoneCodeBtn');
+const phoneAuthError = document.getElementById('phoneAuthError');
+let phoneRecaptchaVerifier = null;
+let phoneConfirmationResult = null;
+
+if (phoneAuthBtn && phoneAuthModal) {
+    phoneAuthBtn.addEventListener('click', () => {
+        alert("Phone sign-in is coming soon!");
+        return;
+        phoneAuthModal.style.display = 'flex';
+        phoneInputStep.style.display = 'block';
+        phoneVerifyStep.style.display = 'none';
+        phoneNumberInput.value = '+91';
+        phoneCodeInput.value = '';
+        phoneAuthError.classList.add('hidden');
+        
+        if (!phoneRecaptchaVerifier) {
+            try {
+                phoneRecaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-phone', {
+                    'size': 'normal',
+                    'callback': (response) => {
+                        // reCAPTCHA solved, allow signInWithPhoneNumber.
+                    },
+                    'expired-callback': () => {
+                        // Response expired. Ask user to solve reCAPTCHA again.
+                    }
+                });
+                phoneRecaptchaVerifier.render().catch(err => {
+                    console.error("Recaptcha Render Error:", err);
+                });
+            } catch(e) {
+                console.error("Could not init recaptcha", e);
+            }
+        }
+    });
+}
+if (closePhoneAuth) {
+    closePhoneAuth.addEventListener('click', () => {
+        phoneAuthModal.style.display = 'none';
+    });
+}
+if (sendPhoneCodeBtn) {
+    sendPhoneCodeBtn.addEventListener('click', async () => {
+        const phoneNumber = phoneNumberInput.value.trim();
+        if(!phoneNumber) {
+            phoneAuthError.textContent = "Please enter your phone number.";
+            phoneAuthError.classList.remove('hidden');
+            return;
+        }
+        
+        let cleanPhone = phoneNumber.replace(/[\s\-()]/g, '');
+        if (!cleanPhone.startsWith('+')) {
+            phoneAuthError.textContent = "Phone number must start with '+' followed by your country code (e.g. +91 or +880).";
+            phoneAuthError.classList.remove('hidden');
+            return;
+        }
+
+        try {
+            sendPhoneCodeBtn.disabled = true;
+            sendPhoneCodeBtn.textContent = "Sending...";
+            phoneAuthError.classList.add('hidden');
+            
+            phoneConfirmationResult = await signInWithPhoneNumber(auth, cleanPhone, phoneRecaptchaVerifier);
+            
+            phoneInputStep.style.display = 'none';
+            phoneVerifyStep.style.display = 'block';
+        } catch(err) {
+            console.error(err);
+            let msg = err.message ? err.message.replace('Firebase:', '').trim() : String(err);
+            if (err.code === 'auth/invalid-phone-number') {
+                msg = "Invalid phone number format. Please ensure it is correct and includes your country code.";
+            } else if (err.code === 'auth/captcha-check-failed') {
+                msg = "reCAPTCHA verification failed. Please try again.";
+            }
+            phoneAuthError.textContent = msg;
+            phoneAuthError.classList.remove('hidden');
+        } finally {
+            sendPhoneCodeBtn.disabled = false;
+            sendPhoneCodeBtn.textContent = "Send Verification Code";
+        }
+    });
+}
+if (verifyPhoneCodeBtn) {
+    verifyPhoneCodeBtn.addEventListener('click', async () => {
+        const code = phoneCodeInput.value.trim();
+        if(!code) {
+            phoneAuthError.textContent = "Please enter the verification code.";
+            phoneAuthError.classList.remove('hidden');
+            return;
+        }
+        try {
+            verifyPhoneCodeBtn.disabled = true;
+            verifyPhoneCodeBtn.textContent = "Verifying...";
+            phoneAuthError.classList.add('hidden');
+            
+            await phoneConfirmationResult.confirm(code);
+            phoneAuthModal.style.display = 'none';
+            if (loginPromptModal) loginPromptModal.style.display = 'none';
+            if (authErrorMsg) authErrorMsg.classList.add('hidden');
+        } catch(err) {
+            console.error(err);
+            phoneAuthError.textContent = "Invalid code. Please try again.";
+            phoneAuthError.classList.remove('hidden');
+        } finally {
+            verifyPhoneCodeBtn.disabled = false;
+            verifyPhoneCodeBtn.textContent = "Verify & Log In";
+        }
+    });
+}
+// ------------------------
+
 if(loginBtn) loginBtn.addEventListener('click', () => {
     // If they click Login from navbar, show the auth screen if it was hidden
     // but the app structure handles this via AuthState.
