@@ -26,9 +26,11 @@
             </button>
         </div>
         <div class="auth-glass-card hover-3d" id="auth3dCard">
-            <div class="logo text-center mb-4" style="justify-content:center; font-size:2rem;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                <span>Lumina</span>
+            <div class="logo text-center mb-4" style="justify-content:center; font-size:2rem; overflow: hidden; padding: 10px;">
+                <svg class="animate-logo-svg" xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                <span style="display:inline-block;">
+                    <span class="animate-letter" style="animation-delay: 0.1s">L</span><span class="animate-letter-pulse" style="animation-delay: 0.2s">u</span><span class="animate-letter" style="animation-delay: 0.3s">m</span><span class="animate-letter-pulse" style="animation-delay: 0.4s">i</span><span class="animate-letter" style="animation-delay: 0.5s">n</span><span class="animate-letter-pulse" style="animation-delay: 0.6s">a</span>
+                </span>
             </div>
             <p class="text-center text-secondary mb-4">Sign in to continue to Marketplace</p>
 
@@ -49,19 +51,14 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" class="eye-icon" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     </button>
                 </div>
-                <!-- Phone Field (Optional for Phone Auth) -->
-                <div class="form-group hidden" id="phoneAuthGroup">
-                    <label>Or Phone Number (Format: +1234567890)</label>
-                    <input type="tel" id="authPhone" placeholder="+1234567890">
-                </div>
 
                 <p id="authErrorMsg" class="text-danger text-sm hidden text-center mb-2"></p>
 
-                <div id="signupWarning" class="form-group hidden" style="background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b; padding: 10px; border-radius: 4px; margin-bottom: 20px;">
-                    <p class="text-sm" style="color: #d97706; margin: 0;"><strong>Important:</strong> Please write down your email and password, or take a screenshot. You will need them to log in later!</p>
-                </div>
-
                 <button type="submit" class="btn primary w-100 btn-large" style="margin-top:0.5rem;" id="mainAuthBtn">Log In</button>
+                
+                <div class="text-center mb-1" id="forgotPasswordContainer" style="margin-top: 1.25rem;">
+                    <a href="#" id="forgotPasswordLink" style="font-size: 1rem; color: #4285F4; text-decoration: none; font-weight: 500;">Forgotten password?</a>
+                </div>
             </form>
 
             <div class="auth-divider">
@@ -69,13 +66,9 @@
             </div>
 
             <div class="auth-social-buttons">
-                <button type="button" class="btn secondary w-100 mb-2" id="googleAuthBtn" style="justify-content:center; gap:10px;">
+                <button type="button" class="btn secondary w-100 mb-2" id="googleAuthBtn" style="justify-content:center; gap:10px; cursor: not-allowed; opacity: 0.6;">
                     <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                    Continue with Google
-                </button>
-                <button type="button" class="btn secondary w-100" id="phoneAuthBtn" style="justify-content:center; gap:10px; opacity:0.5; cursor:not-allowed;" title="Coming Soon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                    Continue with Phone (Coming Soon)
+                    Continue with Google (Coming Soon)
                 </button>
             </div>
             <div id="recaptcha-container"></div>
@@ -526,37 +519,7 @@
         </div>
     </div>
 
-    <!-- Phone Auth Modal -->
-    <div class="modal-overlay" id="phoneAuthModal" style="display: none; z-index: 9999;">
-        <div class="modal-card small-modal" style="background: rgba(15, 17, 21, 0.95); backdrop-filter: blur(20px);">
-            <div class="modal-header">
-                <h3>Phone Sign In</h3>
-                <span class="close" id="closePhoneAuth">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div id="phoneInputStep">
-                    <div class="form-group">
-                        <label>Phone Number</label>
-                        <input type="tel" id="phoneNumberInput" placeholder="+918888888888" value="+91" style="font-size: 1.1rem; padding: 12px; letter-spacing: 1px;">
-                        <p class="text-sm text-secondary mt-2">Include your country code (e.g. +1 for US, +91 for India, +880 for BD).</p>
-                    </div>
-                    <div id="recaptcha-container-phone" style="margin-top: 10px;"></div>
-                    <button class="btn primary w-100 mt-3" id="sendPhoneCodeBtn">Send Verification Code</button>
-                </div>
-                
-                <div id="phoneVerifyStep" style="display: none;">
-                    <div class="form-group">
-                        <label>Verification Code</label>
-                        <input type="text" id="phoneCodeInput" placeholder="123456" style="font-size: 1.2rem; padding: 12px; text-align: center; letter-spacing: 4px;">
-                        <p class="text-sm text-secondary mt-2">Enter the 6-digit code sent to your phone.</p>
-                    </div>
-                    <button class="btn primary w-100 mt-3" id="verifyPhoneCodeBtn">Verify & Log In</button>
-                </div>
 
-                <p id="phoneAuthError" class="text-danger text-sm hidden text-center mt-3" style="word-break: break-word;"></p>
-            </div>
-        </div>
-    </div>
 
     <!-- Login Prompt Modal -->
     <div class="modal-overlay" id="loginPromptModal" style="display: none;">

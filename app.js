@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
 import { getDatabase, ref, get, push, set, update, remove, onValue } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
-import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, RecaptchaVerifier, signInWithPhoneNumber, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 // Firebase Configuration from User
 const firebaseConfig = {
@@ -308,28 +308,93 @@ const tabSignup = document.getElementById('tabSignup');
 const authForm = document.getElementById('authForm');
 const mainAuthBtn = document.getElementById('mainAuthBtn');
 const authErrorMsg = document.getElementById('authErrorMsg');
+const forgotPasswordLink = document.getElementById('forgotPasswordLink');
 
 let isLoginMode = true;
 
+// Magical Idle Animation Logic
+let authIdleTimer;
+const resetAuthIdleTimer = () => {
+    if (mainAuthBtn) {
+        mainAuthBtn.classList.remove('auth-btn-magical');
+        clearTimeout(authIdleTimer);
+        // Do not add animation if button is disabled
+        if (!mainAuthBtn.disabled) {
+            authIdleTimer = setTimeout(() => {
+                mainAuthBtn.classList.add('auth-btn-magical');
+            }, 4000); // 4 seconds
+        }
+    }
+};
+
+// Listen to interactions to reset the timer
+['mousedown', 'touchstart', 'keydown', 'scroll', 'click'].forEach(evt => {
+    window.addEventListener(evt, resetAuthIdleTimer, { passive: true });
+});
+// Start the initial timer
+resetAuthIdleTimer();
+
 if(tabLogin) tabLogin.addEventListener('click', () => {
-    isLoginMode = true;
-    tabLogin.classList.add('active');
-    if(tabSignup) tabSignup.classList.remove('active');
-    if(mainAuthBtn) mainAuthBtn.textContent = 'Log In';
-    if(authForm) authForm.reset();
-    if(authErrorMsg) authErrorMsg.classList.add('hidden');
-    if(document.getElementById('signupWarning')) document.getElementById('signupWarning').classList.add('hidden');
+    if (isLoginMode) return;
+    performTabSwitch(true);
 });
 
 if(tabSignup) tabSignup.addEventListener('click', () => {
-    isLoginMode = false;
-    tabSignup.classList.add('active');
-    if(tabLogin) tabLogin.classList.remove('active');
-    if(mainAuthBtn) mainAuthBtn.textContent = 'Sign Up';
+    if (!isLoginMode) return;
+    performTabSwitch(false);
+});
+
+async function performTabSwitch(toLogin) {
+    const card = document.getElementById('auth3dCard');
+    const labels = authForm.querySelectorAll('label, .text-center:not(.logo), button');
+    const inputs = authForm.querySelectorAll('input');
+    
+    // Add 3d flip animation
+    if (card) {
+        card.classList.remove('animate-tab-switch');
+        void card.offsetWidth; // trigger reflow
+        card.classList.add('animate-tab-switch');
+    }
+    
+    // Wait for the card to be at 90 degrees (halfway point)
+    await new Promise(r => setTimeout(r, 300));
+    
+    isLoginMode = toLogin;
+    
+    if (isLoginMode) {
+        tabLogin.classList.add('active');
+        if(tabSignup) tabSignup.classList.remove('active');
+        if(mainAuthBtn) mainAuthBtn.textContent = 'Log In';
+        if(forgotPasswordLink) forgotPasswordLink.style.display = 'block';
+    } else {
+        tabSignup.classList.add('active');
+        if(tabLogin) tabLogin.classList.remove('active');
+        if(mainAuthBtn) mainAuthBtn.textContent = 'Sign Up';
+        if(forgotPasswordLink) forgotPasswordLink.style.display = 'none';
+    }
+    
     if(authForm) authForm.reset();
     if(authErrorMsg) authErrorMsg.classList.add('hidden');
-    if(document.getElementById('signupWarning')) document.getElementById('signupWarning').classList.remove('hidden');
-});
+    
+    // Add falling animation to text elements
+    labels.forEach((el, index) => {
+        el.classList.remove('animate-text-drop');
+        void el.offsetWidth;
+        el.style.animationDelay = `${index * 0.05}s`;
+        el.classList.add('animate-text-drop');
+    });
+    inputs.forEach((el, index) => {
+        el.classList.remove('animate-text-drop');
+        void el.offsetWidth;
+        el.style.animationDelay = `${(labels.length + index) * 0.05}s`;
+        el.classList.add('animate-text-drop');
+    });
+    
+    // Remove the flip class after animation completes
+    setTimeout(() => {
+        if (card) card.classList.remove('animate-tab-switch');
+    }, 350);
+}
 
 // Email/Password login logic
 if(authForm) authForm.addEventListener('submit', async (e) => {
@@ -383,172 +448,72 @@ if(togglePassword) {
     });
 }
 
-const handleGoogleLogin = async () => {
-    try {
-        if (window.self !== window.top) {
-            console.warn("Attempting Google Sign-In inside an iframe. It may fail due to browser security policies.");
-        }
-        const provider = new GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-        
-        // Detect if running as standalone PWA or on a mobile device
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const inIframe = window.self !== window.top;
+// Forgot Password Logic
+let forgotPasswordCooldown = 0;
+let defaultForgotText = "Forgotten password?";
 
-        if (!inIframe && (isStandalone || isMobile)) {
-            // Use redirect for mobile / standalone to avoid blank screen issues
-            await signInWithRedirect(auth, provider);
-        } else {
-            // Use popup for desktop / iframe
-            await signInWithPopup(auth, provider);
-            if(loginPromptModal) loginPromptModal.style.display = 'none';
-            if(authErrorMsg) authErrorMsg.classList.add('hidden');
-        }
-    } catch (error) {
-        console.error("Google sign in error:", error);
-        let errorMsg = error.message || "Failed to sign in with Google.";
-        if (error.code === 'auth/unauthorized-domain') {
-            errorMsg = `Domain not authorized in Firebase. You MUST add: ${window.location.hostname} to Firebase Console -> Authentication -> Settings -> Authorized Domains.`;
-            alert(errorMsg); // Show an alert so the user definitely sees it
-        } else if (error.code === 'auth/network-request-failed' || error.message.includes('network-request-failed')) {
-            errorMsg = "Google Sign-In popup was blocked or failed. Please click 'Open in new tab' (top right arrow in AI Studio) to log in.";
-        } else if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
-            return; // Ignore this error as it just means the user cancelled the action
-        } else if (error.code === 'auth/invalid-credential') {
-            errorMsg = "Invalid credentials. Please ensure your Google account is active.";
-        }
+if(forgotPasswordLink) {
+    forgotPasswordLink.addEventListener('click', async (e) => {
+        e.preventDefault();
         
-        if(authErrorMsg) {
-            authErrorMsg.textContent = errorMsg;
+        if (forgotPasswordCooldown > 0) return;
+        
+        const email = document.getElementById('authEmail').value.trim();
+        if(!email) {
+            authErrorMsg.textContent = "Please enter your email address first, then click 'Forgotten password?'.";
             authErrorMsg.classList.remove('hidden');
-        } else {
-            alert(errorMsg);
+            return;
         }
+        try {
+            forgotPasswordCooldown = 60;
+            forgotPasswordLink.style.opacity = '0.5';
+            forgotPasswordLink.style.cursor = 'not-allowed';
+            
+            await sendPasswordResetEmail(auth, email);
+            
+            authErrorMsg.innerHTML = "<strong>Message Sent!</strong> A password reset link has been sent to " + email + ".";
+            authErrorMsg.style.color = '#34d399'; // Green success color
+            authErrorMsg.classList.remove('hidden');
+            
+            const timerInterval = setInterval(() => {
+                forgotPasswordCooldown--;
+                if (forgotPasswordCooldown <= 0) {
+                    clearInterval(timerInterval);
+                    forgotPasswordLink.textContent = defaultForgotText;
+                    forgotPasswordLink.style.opacity = '1';
+                    forgotPasswordLink.style.cursor = 'pointer';
+                } else {
+                    forgotPasswordLink.textContent = `Resend in ${forgotPasswordCooldown}s`;
+                }
+            }, 1000);
+            
+            setTimeout(() => {
+                authErrorMsg.style.color = ''; // Reset color
+            }, 10000);
+        } catch (error) {
+            console.error(error);
+            forgotPasswordCooldown = 0;
+            forgotPasswordLink.style.opacity = '1';
+            forgotPasswordLink.style.cursor = 'pointer';
+            
+            authErrorMsg.textContent = error.message.replace('Firebase:', '').trim();
+            authErrorMsg.style.color = '';
+            authErrorMsg.classList.remove('hidden');
+        }
+    });
+}
+
+const handleGoogleLogin = async (e) => {
+    e.preventDefault();
+    if(authErrorMsg) {
+        authErrorMsg.textContent = "Google Login is coming soon!";
+        authErrorMsg.style.color = '#f59e0b';
+        authErrorMsg.classList.remove('hidden');
     }
 };
 
 if(document.getElementById('googleAuthBtn')) { document.getElementById('googleAuthBtn').addEventListener('click', handleGoogleLogin); }
 
-// --- Phone Auth Logic ---
-const phoneAuthBtn = document.getElementById('phoneAuthBtn');
-const phoneAuthModal = document.getElementById('phoneAuthModal');
-const closePhoneAuth = document.getElementById('closePhoneAuth');
-const phoneInputStep = document.getElementById('phoneInputStep');
-const phoneVerifyStep = document.getElementById('phoneVerifyStep');
-const phoneNumberInput = document.getElementById('phoneNumberInput');
-const sendPhoneCodeBtn = document.getElementById('sendPhoneCodeBtn');
-const phoneCodeInput = document.getElementById('phoneCodeInput');
-const verifyPhoneCodeBtn = document.getElementById('verifyPhoneCodeBtn');
-const phoneAuthError = document.getElementById('phoneAuthError');
-let phoneRecaptchaVerifier = null;
-let phoneConfirmationResult = null;
-
-if (phoneAuthBtn && phoneAuthModal) {
-    phoneAuthBtn.addEventListener('click', () => {
-        alert("Phone sign-in is coming soon!");
-        return;
-        phoneAuthModal.style.display = 'flex';
-        phoneInputStep.style.display = 'block';
-        phoneVerifyStep.style.display = 'none';
-        phoneNumberInput.value = '+91';
-        phoneCodeInput.value = '';
-        phoneAuthError.classList.add('hidden');
-        
-        if (!phoneRecaptchaVerifier) {
-            try {
-                phoneRecaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-phone', {
-                    'size': 'normal',
-                    'callback': (response) => {
-                        // reCAPTCHA solved, allow signInWithPhoneNumber.
-                    },
-                    'expired-callback': () => {
-                        // Response expired. Ask user to solve reCAPTCHA again.
-                    }
-                });
-                phoneRecaptchaVerifier.render().catch(err => {
-                    console.error("Recaptcha Render Error:", err);
-                });
-            } catch(e) {
-                console.error("Could not init recaptcha", e);
-            }
-        }
-    });
-}
-if (closePhoneAuth) {
-    closePhoneAuth.addEventListener('click', () => {
-        phoneAuthModal.style.display = 'none';
-    });
-}
-if (sendPhoneCodeBtn) {
-    sendPhoneCodeBtn.addEventListener('click', async () => {
-        const phoneNumber = phoneNumberInput.value.trim();
-        if(!phoneNumber) {
-            phoneAuthError.textContent = "Please enter your phone number.";
-            phoneAuthError.classList.remove('hidden');
-            return;
-        }
-        
-        let cleanPhone = phoneNumber.replace(/[\s\-()]/g, '');
-        if (!cleanPhone.startsWith('+')) {
-            phoneAuthError.textContent = "Phone number must start with '+' followed by your country code (e.g. +91 or +880).";
-            phoneAuthError.classList.remove('hidden');
-            return;
-        }
-
-        try {
-            sendPhoneCodeBtn.disabled = true;
-            sendPhoneCodeBtn.textContent = "Sending...";
-            phoneAuthError.classList.add('hidden');
-            
-            phoneConfirmationResult = await signInWithPhoneNumber(auth, cleanPhone, phoneRecaptchaVerifier);
-            
-            phoneInputStep.style.display = 'none';
-            phoneVerifyStep.style.display = 'block';
-        } catch(err) {
-            console.error(err);
-            let msg = err.message ? err.message.replace('Firebase:', '').trim() : String(err);
-            if (err.code === 'auth/invalid-phone-number') {
-                msg = "Invalid phone number format. Please ensure it is correct and includes your country code.";
-            } else if (err.code === 'auth/captcha-check-failed') {
-                msg = "reCAPTCHA verification failed. Please try again.";
-            }
-            phoneAuthError.textContent = msg;
-            phoneAuthError.classList.remove('hidden');
-        } finally {
-            sendPhoneCodeBtn.disabled = false;
-            sendPhoneCodeBtn.textContent = "Send Verification Code";
-        }
-    });
-}
-if (verifyPhoneCodeBtn) {
-    verifyPhoneCodeBtn.addEventListener('click', async () => {
-        const code = phoneCodeInput.value.trim();
-        if(!code) {
-            phoneAuthError.textContent = "Please enter the verification code.";
-            phoneAuthError.classList.remove('hidden');
-            return;
-        }
-        try {
-            verifyPhoneCodeBtn.disabled = true;
-            verifyPhoneCodeBtn.textContent = "Verifying...";
-            phoneAuthError.classList.add('hidden');
-            
-            await phoneConfirmationResult.confirm(code);
-            phoneAuthModal.style.display = 'none';
-            if (loginPromptModal) loginPromptModal.style.display = 'none';
-            if (authErrorMsg) authErrorMsg.classList.add('hidden');
-        } catch(err) {
-            console.error(err);
-            phoneAuthError.textContent = "Invalid code. Please try again.";
-            phoneAuthError.classList.remove('hidden');
-        } finally {
-            verifyPhoneCodeBtn.disabled = false;
-            verifyPhoneCodeBtn.textContent = "Verify & Log In";
-        }
-    });
-}
-// ------------------------
 
 if(loginBtn) loginBtn.addEventListener('click', () => {
     // If they click Login from navbar, show the auth screen if it was hidden
