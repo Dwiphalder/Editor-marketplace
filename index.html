@@ -152,33 +152,7 @@
             <p class="text-secondary lg-text mb-2 uppercase" style="font-size: 1.1rem; max-width: 600px; margin: 0 auto; font-weight: 500;">HIRE TOP TALENT FOR YOUR VIDEO, PHOTO, AND AUDIO PROJECTS.</p>
 
 
-            <div id="filterContainer" style="display: none;">
-                <div class="filters-scroll" id="categoryFilters">
-                    <button class="filter-chip active" data-cat="All">All Categories</button>
-                    <button class="filter-chip" data-cat="Video">Video Editing</button>
-                    <button class="filter-chip" data-cat="Photo">Photo Retouching</button>
-                    <button class="filter-chip" data-cat="Motion">Motion Graphics</button>
-                    <button class="filter-chip" data-cat="Audio">Audio Post-Production</button>
-                </div>
-                
-                <div class="advanced-filters mt-4 pt-4" style="border-top: 1px solid var(--glass-border); display: flex; gap: 10px; flex-wrap: wrap;">
-                    <select id="filterRating" class="filter-select">
-                        <option value="All">⭐ All Ratings</option>
-                        <option value="4+">⭐ 4.0 & Above</option>
-                        <option value="3+">⭐ 3.0 & Above</option>
-                    </select>
-                    <select id="filterType" class="filter-select">
-                        <option value="All">👤 Editor Type</option>
-                        <option value="New">New Editors</option>
-                        <option value="Experienced">Experienced</option>
-                    </select>
-                    <select id="sortPrice" class="filter-select">
-                        <option value="None">💰 Price Sort</option>
-                        <option value="LowToHigh">Low to High</option>
-                        <option value="HighToLow">High to Low</option>
-                    </select>
-                </div>
-            </div>
+            <div id="filterContainer" style="display: none;"></div>
         </section>
 
         <!-- Trending Section -->
@@ -238,33 +212,7 @@
                     </button>
                 </div>
 
-                <div id="filterContainerResults" style="display: none;">
-                    <div class="advanced-filters mt-4" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <select id="filterRatingResults" class="filter-select">
-                            <option value="All">⭐ All Ratings</option>
-                            <option value="4+">⭐ 4.0 & Above</option>
-                            <option value="3+">⭐ 3.0 & Above</option>
-                        </select>
-                        <select id="filterTypeResults" class="filter-select">
-                            <option value="All">👤 Editor Type</option>
-                            <option value="New">New Editors</option>
-                            <option value="Experienced">Experienced</option>
-                        </select>
-                        <select id="sortPriceResults" class="filter-select">
-                            <option value="None">💰 Price Sort</option>
-                            <option value="LowToHigh">Low to High</option>
-                            <option value="HighToLow">High to Low</option>
-                        </select>
-                        
-                        <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap; background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 12px; border: 1px solid var(--glass-border);">
-                            <span style="font-size: 0.85rem; color: var(--text-secondary);">Budget:</span>
-                            <input type="number" id="minBudget" placeholder="Min ₹" style="width: 80px; padding: 4px 8px; border-radius: 6px; border: none; background: rgba(0,0,0,0.3); color: white; font-size: 0.85rem;" min="0">
-                            <span style="font-size: 0.85rem; color: var(--text-secondary);">-</span>
-                            <input type="number" id="maxBudget" placeholder="Max ₹" style="width: 80px; padding: 4px 8px; border-radius: 6px; border: none; background: rgba(0,0,0,0.3); color: white; font-size: 0.85rem;" min="0">
-                            <button id="applyBudgetBtn" class="btn primary btn-sm" style="padding: 4px 10px; border-radius: 6px; font-size: 0.8rem;">Apply</button>
-                        </div>
-                    </div>
-                </div>
+                <div id="filterContainerResults" style="display: none;"></div>
 
                 <p id="searchQueryLabel" class="text-secondary mt-3 mb-2" style="font-size: 1rem;"></p>
                 <div id="searchLoading" class="text-center p-4" style="display: none;">
@@ -291,108 +239,306 @@
         </div>
 
         <div id="jobsView" style="display: none;" class="mt-4 pb-10">
-            <section class="filter-section mx-auto text-center mb-6" style="max-width: 800px; background: rgba(38, 220, 100, 0.05); padding: 2rem; border-radius: 24px; border: 1px solid rgba(38, 220, 100, 0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            <section id="jobsHeaderSection" class="filter-section mx-auto text-center mb-6" style="max-width: 800px; background: rgba(38, 220, 100, 0.05); padding: 2rem; border-radius: 24px; border: 1px solid rgba(38, 220, 100, 0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
                 <h1 class="gradient-text tracking-tight mb-2 uppercase" style="font-family: 'Outfit', sans-serif; font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; line-height: 1.1; letter-spacing: -1px; background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">POST YOUR PROFILE</h1>
                 <p class="text-secondary lg-text uppercase" style="font-size: 1rem; max-width: 600px; margin: 0 auto; font-weight: 500;">Join our network as an editor and let clients reach out to you.</p>
             </section>
 
-            <div class="glass-card w-100 p-4" style="max-width: 800px; margin: 0 auto;">
-                <h3 class="mb-4">Editor Application</h3>
-                <p id="jobsCompleteProfileMsg" class="text-secondary mb-4 hidden" style="color:var(--danger) !important;">Please complete your profile before applying. We need your Name and Phone Number.</p>
-                <div id="jobsFormArea">
-                    <div class="form-grid">
-                        <div class="form-group full-width">
-                            <label>Full Name</label>
-                            <input type="text" id="jobName" placeholder="e.g. John Doe">
-                        </div>
-                        <div class="form-group">
-                            <label>Email Address</label>
-                            <input type="email" id="jobEmail" placeholder="e.g. you@example.com">
-                        </div>
-                        <div class="form-group">
-                            <label>Contact Number (WhatsApp preferred)</label>
-                            <input type="text" id="jobPhone" placeholder="e.g. +1234567890">
-                        </div>
-                        <div class="form-group">
-                            <label>Category</label>
-                            <select id="jobCategory">
-                                <option value="Video">Video Editing</option>
-                                <option value="Photo">Photo Retouching</option>
-                                <option value="Audio">Audio Design</option>
-                                <option value="VFX">VFX & 3D</option>
-                            </select>
-                        </div>
-                        <div class="form-group" id="jobStyleGroup">
-                            <label>Editor Specialty / Focus (e.g. YouTube, Short Reels, Wedding)</label>
-                            <input type="text" id="jobStyle" placeholder="e.g. YouTube, Short Reels, Wedding, Corporate">
-                        </div>
-                        <div class="form-group" style="display: flex; gap: 10px;">
-                            <div style="flex: 1;">
-                                <label>Starting Price (₹)</label>
-                                <input type="number" id="jobPrice" placeholder="50" required>
-                            </div>
-                            <div style="flex: 1;">
-                                <label>Max Price (₹) (Optional)</label>
-                                <input type="number" id="jobMaxPrice" placeholder="1500">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Experience</label>
-                            <input type="text" id="jobExperience" placeholder="e.g. 5 Years" required>
-                        </div>
-                        <div class="form-group full-width">
-                            <label>Primary Skills (General, comma separated)</label>
-                            <input type="text" id="jobSkills" placeholder="e.g. Color Grading, Sound Mixing, Motion Graphics" required>
-                        </div>
-                        <div class="form-group full-width">
-                            <label>Software / Tools (comma separated)</label>
-                            <input type="text" id="jobTools" placeholder="e.g. Premiere Pro, CapCut, DaVinci Resolve">
-                        </div>
-                        <div class="form-group full-width">
-                            <label>Bio</label>
-                            <textarea id="jobBio" rows="3" placeholder="Professional editor..." required></textarea>
-                        </div>
-                        <div class="form-group full-width">
-                            <label>Video Clip Links (comma separated YouTube/Drive links)</label>
-                            <textarea id="jobVideoClips" rows="2" placeholder="https://youtube.com/watch?v=..., https://drive.google.com/..."></textarea>
-                        </div>
-                        <div class="form-group full-width p-3" style="background: rgba(255,255,255,0.02); border-radius: 8px;">
-                            <label>Profile Avatar</label>
-                            <p class="text-sm text-secondary mb-3">By default, this imports your user profile image. You can override it here.</p>
-                            <div class="upload-wrapper" style="border:none;">
-                                <img id="jobAvatarPreview" src="data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'%3e%3c/path%3e%3ccircle cx='12' cy='7' r='4'%3e%3c/circle%3e%3c/svg%3e" class="preview-img mb-2" style="width:80px; height:80px; object-fit:cover; border-radius:50%; border: 2px solid var(--primary);">
-                                <div style="display:flex; gap:10px; align-items:center;">
-                                    <input type="file" id="jobAvatarUpload" accept="image/*" style="display:none;">
-                                    <button class="btn secondary btn-sm" onclick="document.getElementById('jobAvatarUpload').click()">Upload Custom Photo</button>
-                                </div>
-                                <input type="hidden" id="jobAvatarUrl">
-                            </div>
-                        </div>
+            <!-- Form Area -->
+            <div id="jobsFormContainer" class="glass-card w-100 p-4" style="max-width: 800px; margin: 0 auto; overflow: hidden; position: relative; min-height: 400px;">
+                <div id="jobsProgressBar" style="display: flex; gap: 5px; margin-bottom: 30px;">
+                    <div class="progress-segment active" style="flex:1; height: 6px; border-radius: 3px; background: var(--primary); transition: 0.3s;"></div>
+                    <div class="progress-segment" style="flex:1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1); transition: 0.3s;"></div>
+                    <div class="progress-segment" style="flex:1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1); transition: 0.3s;"></div>
+                    <div class="progress-segment" style="flex:1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1); transition: 0.3s;"></div>
+                </div>
 
-                        <div class="form-group full-width p-3" style="background: rgba(255,255,255,0.02); border-radius: 8px;">
-                            <label>Profile Banner (Required)</label>
-                            <p class="text-sm text-secondary mb-3">Upload a high-quality wide image.</p>
-                            <div class="upload-wrapper" style="border:none;">
-                                <img id="jobBannerPreview" src="" class="preview-img wide-preview mb-2" style="display:none; width:100%; height:100px; object-fit:cover; border-radius:8px;">
-                                <div style="display:flex; gap:10px; align-items:center;">
-                                    <input type="file" id="jobBannerUpload" accept="image/*" style="display:none;">
-                                    <button class="btn secondary btn-sm" onclick="document.getElementById('jobBannerUpload').click()">Upload Banner</button>
+                <p id="jobsCompleteProfileMsg" class="text-secondary mb-4 hidden" style="color:var(--danger) !important;">Please complete your profile before applying. We need your Name and Phone Number.</p>
+                
+                <div id="jobsFormArea" style="position: relative;">
+                    <!-- STEP 1 -->
+                    <div class="wizard-step" id="wizardStep1" style="animation: fadeInUp 0.4s ease forwards;">
+                        <h3 class="mb-2" style="font-size:1.5rem;">Let's get to know you 👤</h3>
+                        <p class="text-secondary mb-4">What's your name and how can clients contact you?</p>
+                        
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label>What is your full name?</label>
+                                <input type="text" id="jobName" placeholder="e.g. John Doe">
+                            </div>
+                            <div class="form-group">
+                                <label>What's your email address?</label>
+                                <input type="email" id="jobEmail" placeholder="e.g. you@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; gap: 8px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                                    </svg>
+                                    WhatsApp Contact Number
+                                </label>
+                                <div style="display: flex; gap: 10px;">
+                                    <select id="countryCode" style="width: 110px; padding: 12px; border-radius: 8px; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.1);">
+                                        <option value="+91">🇮🇳 +91</option>
+                                        <option value="+1">🇺🇸 +1</option>
+                                        <option value="+44">🇬🇧 +44</option>
+                                        <option value="+61">🇦🇺 +61</option>
+                                        <option value="+880">🇧🇩 +880</option>
+                                        <option value="+92">🇵🇰 +92</option>
+                                    </select>
+                                    <input type="text" id="jobPhone" placeholder="1234567890" style="flex: 1;">
                                 </div>
-                                <input type="hidden" id="jobBannerUrl">
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label>Portfolio Link</label>
-                            <input type="url" id="jobPortfolio" placeholder="https://dribbble.com/your-profile">
+                        <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+                            <button type="button" class="btn primary" onclick="goToWizardStep(2, 1)">Next Step</button>
                         </div>
                     </div>
-                    <button id="submitJobReqBtn" class="btn primary w-100 mt-4">Submit Application</button>
+
+                    <!-- STEP 2 -->
+                    <div class="wizard-step" id="wizardStep2" style="display: none;">
+                        <h3 class="mb-2" style="font-size:1.5rem;">Your Profession 🎬</h3>
+                        <p class="text-secondary mb-4">What do you do and how much do you charge?</p>
+                        
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>What defines your primary category?</label>
+                                <select id="jobCategory">
+                                    <option value="Video">Video Editing</option>
+                                    <option value="Photo">Photo Retouching</option>
+                                    <option value="Audio">Audio Design</option>
+                                    <option value="VFX">VFX & 3D</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="jobStyleGroup">
+                                <label>What's your specialty or focus?</label>
+                                <input type="text" id="jobStyle" placeholder="e.g. YouTube, Short Reels, Wedding, Corporate">
+                            </div>
+                            <div class="form-group" style="display: flex; gap: 10px;">
+                                <div style="flex: 1;">
+                                    <label>Starting Price (₹)</label>
+                                    <input type="number" id="jobPrice" placeholder="50" required>
+                                </div>
+                                <div style="flex: 1;">
+                                    <label>Max Price (₹) (Optional)</label>
+                                    <input type="number" id="jobMaxPrice" placeholder="1500">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>How many years of experience do you have?</label>
+                                <input type="text" id="jobExperience" placeholder="e.g. 5 Years" required>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                            <button type="button" class="btn secondary" onclick="goToWizardStep(1)">Back</button>
+                            <button type="button" class="btn primary" onclick="goToWizardStep(3, 2)">Next Step</button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3 -->
+                    <div class="wizard-step" id="wizardStep3" style="display: none;">
+                        <h3 class="mb-2" style="font-size:1.5rem;">Skills & Bio 🖋️</h3>
+                        <p class="text-secondary mb-4">Tell clients about your expertise and what tools you use.</p>
+                        
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label>What are your primary skills? (comma separated)</label>
+                                <input type="text" id="jobSkills" placeholder="e.g. Color Grading, Sound Mixing, Motion Graphics" required>
+                            </div>
+                            <div class="form-group full-width">
+                                <label>What software or tools do you use?</label>
+                                <input type="text" id="jobTools" placeholder="e.g. Premiere Pro, CapCut, DaVinci Resolve">
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Write a short professional bio</label>
+                                <textarea id="jobBio" rows="3" placeholder="I am a professional editor with a passion for storytelling..." required></textarea>
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Add some links to your video clips (comma separated YouTube/Drive links)</label>
+                                <textarea id="jobVideoClips" rows="2" placeholder="https://youtube.com/watch?v=..., https://drive.google.com/..."></textarea>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                            <button type="button" class="btn secondary" onclick="goToWizardStep(2)">Back</button>
+                            <button type="button" class="btn primary" onclick="goToWizardStep(4, 3)">Next Step</button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 4 -->
+                    <div class="wizard-step" id="wizardStep4" style="display: none;">
+                        <h3 class="mb-2" style="font-size:1.5rem;">Make it shine 🖼️</h3>
+                        <p class="text-secondary mb-4">Let's finish up with your profile avatar and banner.</p>
+                        
+                        <div class="form-grid">
+                            <div class="form-group full-width p-3" style="background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                <label>Profile Avatar</label>
+                                <p class="text-sm text-secondary mb-3">By default, this imports your user profile image. You can override it here.</p>
+                                <div class="upload-wrapper" style="border:none;">
+                                    <img id="jobAvatarPreview" src="data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'%3e%3c/path%3e%3ccircle cx='12' cy='7' r='4'%3e%3c/circle%3e%3c/svg%3e" class="preview-img mb-2" style="width:80px; height:80px; object-fit:cover; border-radius:50%; border: 2px solid var(--primary);">
+                                    <div style="display:flex; gap:10px; align-items:center;">
+                                        <input type="file" id="jobAvatarUpload" accept="image/*" style="display:none;">
+                                        <button type="button" class="btn secondary btn-sm" onclick="document.getElementById('jobAvatarUpload').click()">Upload Custom Photo</button>
+                                    </div>
+                                    <input type="hidden" id="jobAvatarUrl">
+                                </div>
+                            </div>
+
+                            <div class="form-group full-width p-3" style="background: rgba(255,255,255,0.02); border-radius: 8px;">
+                                <label>Profile Banner (Required)</label>
+                                <p class="text-sm text-secondary mb-3">Upload a high-quality wide image.</p>
+                                <div class="upload-wrapper" style="border:none;">
+                                    <img id="jobBannerPreview" src="" class="preview-img wide-preview mb-2" style="display:none; width:100%; height:100px; object-fit:cover; border-radius:8px;">
+                                    <div style="display:flex; gap:10px; align-items:center;">
+                                        <input type="file" id="jobBannerUpload" accept="image/*" style="display:none;">
+                                        <button type="button" class="btn secondary btn-sm" onclick="document.getElementById('jobBannerUpload').click()">Upload Banner</button>
+                                    </div>
+                                    <input type="hidden" id="jobBannerUrl">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Portfolio Link</label>
+                                <input type="url" id="jobPortfolio" placeholder="https://dribbble.com/your-profile">
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; margin-top: 30px;">
+                            <button type="button" class="btn secondary" onclick="goToWizardStep(3)">Back</button>
+                            <button type="button" id="submitJobReqBtn" class="btn primary" style="padding-left:30px; padding-right:30px;">Complete & Post Profile</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Application Status Container -->
+            <div id="jobsStatusContainer" class="glass-card w-100 p-0" style="display: none; max-width: 800px; margin: 0 auto; overflow: hidden; border: 1px solid rgba(255,152,0,0.3); box-shadow: 0 10px 30px rgba(255,152,0,0.1);">
+                <div style="padding: 30px 20px 20px;">
+                    <h3 class="mb-4 text-center" style="font-size: 1.1rem; color: var(--text-secondary);">Your Profile Preview</h3>
+                    
+                    <div id="statusProfilePreview" style="max-width: 350px; margin: 0 auto; background: var(--bg-card); border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; text-align: left; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                        <div style="height: 100px; width: 100%; position: relative;">
+                            <img id="previewBannerImg" src="" style="width: 100%; height: 100%; object-fit: cover; background: rgba(0,0,0,0.5);">
+                            <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to top, var(--bg-card), transparent);"></div>
+                        </div>
+                        <div style="padding: 0 20px 20px; position: relative; margin-top: -40px;">
+                            <img id="previewAvatarImg" src="" style="width: 70px; height: 70px; border-radius: 50%; border: 3px solid var(--bg-card); object-fit: cover; background: #1a1c23; margin-bottom: 8px;">
+                            <h3 id="previewNameTxt" style="font-size: 1.2rem; font-weight: bold; margin: 0; color: white;">...</h3>
+                            <p id="previewCatTxt" class="text-primary text-sm m-0" style="font-weight: 500;">...</p>
+                            <p id="previewBioTxt" class="text-secondary text-sm mt-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 0;">...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 text-center">
+                        <button class="btn secondary btn-sm" id="editPendingAppBtn" style="border: 1px solid rgba(255,255,255,0.1);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 5px; display: inline;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            Edit Application
+                        </button>
+                    </div>
+                </div>
+
+                <div style="background: linear-gradient(90deg, rgba(255,152,0,0.2) 0%, rgba(255,152,0,0.05) 100%); padding: 25px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; align-items: center; text-align: center;">
+                    <div style="width: 60px; height: 60px; background: rgba(255,152,0,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; border: 2px solid rgba(255,152,0,0.5); position: relative;">
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 3s linear infinite;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    </div>
+                    <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.8rem; margin: 0; color: white;">Application Under Review</h2>
+                    <p class="text-secondary mt-2" style="max-width: 500px; font-size: 0.95rem;">Your profile has been submitted and is currently being reviewed. The review process can take up to 48 hours.</p>
+                    
+                    <!-- Countdown display -->
+                    <div style="margin-top: 20px; display: flex; gap: 15px;">
+                        <div style="background: rgba(0,0,0,0.3); padding: 10px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); width: 80px;">
+                            <span id="countdownHours" style="font-size: 1.5rem; font-family: 'JetBrains Mono', monospace; font-weight: bold; color: var(--warning);">47</span><br>
+                            <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary);">Hours</span>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); padding: 10px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); width: 80px;">
+                            <span id="countdownMinutes" style="font-size: 1.5rem; font-family: 'JetBrains Mono', monospace; font-weight: bold; color: var(--warning);">59</span><br>
+                            <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary);">Mins</span>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); padding: 10px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); width: 80px;">
+                            <span id="countdownSeconds" style="font-size: 1.5rem; font-family: 'JetBrains Mono', monospace; font-weight: bold; color: var(--warning);">59</span><br>
+                            <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary);">Secs</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
+        <div id="profileView" style="display: none;" class="mt-4 pb-10">
+            <section class="filter-section mx-auto text-center mb-6" style="max-width: 600px; background: rgba(59, 130, 246, 0.05); padding: 2rem; border-radius: 24px; border: 1px solid rgba(59, 130, 246, 0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                <h1 id="userProfileTitle" class="gradient-text tracking-tight mb-2 uppercase" style="font-family: 'Outfit', sans-serif; font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; line-height: 1.1; letter-spacing: -1px; background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">MY PROFILE</h1>
+                <div class="text-center mb-2">
+                    <span id="userShortId" style="background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-family: monospace; letter-spacing: 1px;">ID: ------</span>
+                </div>
+                <p id="profileCompleteMsg" class="text-secondary mb-3 hidden">Please complete your profile before hiring editors.</p>
+                
+                <div class="form-group text-center">
+                    <img id="upAvatarPreview" src="data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'%3e%3c/path%3e%3ccircle cx='12' cy='7' r='4'%3e%3c/circle%3e%3c/svg%3e" style="width:100px; height:100px; border-radius:50%; object-fit:cover; margin-bottom:10px; border:2px solid var(--primary);">
+                    <input type="file" id="upAvatarUpload" accept="image/*" style="display:none;">
+                    <br>
+                    <button class="btn secondary btn-sm" onclick="document.getElementById('upAvatarUpload').click()">Upload Photo</button>
+                    <input type="hidden" id="upAvatarUrl">
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap: wrap; text-align: left;">
+                    <div class="form-group flex-1" style="min-width: 150px;">
+                        <label>First Name</label>
+                        <input type="text" id="upFirstName" placeholder="John" required>
+                    </div>
+                    <div class="form-group flex-1" style="min-width: 150px;">
+                        <label>Last Name</label>
+                        <input type="text" id="upLastName" placeholder="Doe" required>
+                    </div>
+                </div>
+                <div class="form-group" style="text-align: left;">
+                    <label>Contact Number (WhatsApp)</label>
+                    <input type="tel" id="upPhone" placeholder="+91 9876543210" required>
+                </div>
+                <div class="form-group" style="text-align: left;">
+                    <label>Email Address</label>
+                    <input type="email" id="upEmail" readonly style="opacity:0.7; cursor:not-allowed;">
+                </div>
+                <button class="btn primary w-100 mt-2 btn-large" id="saveUserProfileBtn">Save Profile</button>
+                
+                <button id="adminPanelReentryBtnProfile" class="btn warning w-100 mt-3" style="display:none; transition: all 0.3s; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3); font-weight: bold; justify-content: center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    Admin Panel
+                </button>
+
+                <div id="jobProfileSection" style="display:none;" class="mt-4">
+                    <hr style="margin:20px 0; border:1px solid var(--glass-border);">
+                    <h3 style="text-align: left;">My Job Profile</h3>
+                    <p class="text-secondary text-sm mb-3" style="text-align: left;">You are an approved editor! Manage your clients and messages.</p>
+                    <button class="btn primary w-100 mb-2" id="openJobProfileBtn">Open Job Dashboard</button>
+                </div>
+            </section>
+        </div>
+
     </main>
     </div> <!-- END MAIN APP -->
+
+    <!-- Success Modal Overlay -->
+    <div class="modal-overlay" id="successProfileModal" style="display: none; justify-content: center; align-items: center; background: rgba(0,0,0,0.85); z-index: 9999;">
+        <div style="text-align: center; animation: scaleUp 0.5s ease;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" style="width:120px; height:120px; margin: 0 auto;">
+                <circle cx="26" cy="26" r="25" fill="none" style="stroke:#4caf50; stroke-width:3; stroke-miterlimit:10; stroke-dasharray: 166; stroke-dashoffset: 166; animation: drawStroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;"/>
+                <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" style="stroke:#4caf50; stroke-width:4; stroke-linecap: round; stroke-dasharray: 48; stroke-dashoffset: 48; animation: drawStroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.6s forwards;"/>
+            </svg>
+            <h2 style="color: white; margin-top: 20px; font-family: 'Outfit', sans-serif; font-size: 2rem;">Profile Created!</h2>
+            <p class="text-secondary mt-2">Redirecting to your profile...</p>
+        </div>
+    </div>
+
+    <!-- Edit Reset Warning Modal -->
+    <div class="modal-overlay" id="editResetWarningModal" style="display: none; justify-content: center; align-items: center; background: rgba(0,0,0,0.85); z-index: 9999;">
+        <div class="modal-card small-modal" style="text-align: center; animation: scaleUp 0.3s ease; padding: 30px;">
+            <div style="width: 70px; height: 70px; background: rgba(220, 38, 38, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; border: 2px solid rgba(220, 38, 38, 0.5);">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </div>
+            <h3 class="mb-2" style="font-size: 1.5rem;">Reset Timer?</h3>
+            <p class="text-secondary text-sm mb-4">Editing your application will restart the 48-hour review process to ensure quality. Proceed?</p>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn secondary flex-1" id="cancelEditWarningBtn">Cancel</button>
+                <button class="btn primary flex-1" id="confirmEditWarningBtn" style="background: var(--danger); border-color: var(--danger);">Yes, Edit</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Editor Profile Modal -->
     <div class="modal-overlay" id="editorProfileModal" style="display: none;">
@@ -554,83 +700,27 @@
                 <span class="close" id="closeContactModal">&times;</span>
             </div>
             <div class="modal-body">
+                <div style="background: rgba(46, 204, 113, 0.1); border-left: 4px solid var(--success); padding: 12px; border-radius: 4px; margin-bottom: 20px; text-align: left;">
+                    <h4 style="margin: 0 0 5px 0; color: var(--success); display: flex; align-items: center; gap: 6px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        Safe Message Service
+                    </h4>
+                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">Your messages are monitored for your safety to prevent scams. No spam.</p>
+                </div>
                 <p>You can reach out to this editor directly to discuss your project.</p>
                 <div class="contact-links mt-4 text-center">
-                    <button id="contactInApp" class="btn primary w-100 mb-2">💬 In-App Message</button>
+                    <button id="contactInApp" class="btn primary w-100 mb-2">💬 In-App Message (Recommended)</button>
                     <a id="contactEmail" href="#" class="btn secondary w-100 mb-2">📧 Send Email</a>
-                    <a id="contactWhatsapp" href="#" class="btn secondary w-100" target="_blank">💬 WhatsApp</a>
+                    <a id="contactWhatsapp" href="#" class="btn secondary w-100" target="_blank" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                        WhatsApp Message
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- User Profile Modal -->
-    <div class="modal-overlay" id="userProfileModal" style="display: none;">
-        <div class="modal-card">
-            <div class="modal-header">
-                <h3 id="userProfileTitle">My Profile</h3>
-                <span class="close" id="closeUserProfile">&times;</span>
-            </div>
-            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-                <div class="text-center mb-2">
-                    <span id="userShortId" style="background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-family: monospace; letter-spacing: 1px;">ID: ------</span>
-                </div>
-                <p id="profileCompleteMsg" class="text-secondary mb-3 hidden">Please complete your profile before hiring editors.</p>
-                <div class="form-group text-center">
-                    <img id="upAvatarPreview" src="data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'%3e%3c/path%3e%3ccircle cx='12' cy='7' r='4'%3e%3c/circle%3e%3c/svg%3e" style="width:80px; height:80px; border-radius:50%; object-fit:cover; margin-bottom:10px; border:2px solid var(--primary);">
-                    <input type="file" id="upAvatarUpload" accept="image/*" style="display:none;">
-                    <br>
-                    <button class="btn secondary btn-sm" onclick="document.getElementById('upAvatarUpload').click()">Upload Photo (Optional)</button>
-                    <input type="hidden" id="upAvatarUrl">
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <div class="form-group flex-1">
-                        <label>First Name</label>
-                        <input type="text" id="upFirstName" placeholder="John" required>
-                    </div>
-                    <div class="form-group flex-1">
-                        <label>Last Name</label>
-                        <input type="text" id="upLastName" placeholder="Doe" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Contact Number</label>
-                    <input type="tel" id="upPhone" placeholder="+91 9876543210" required>
-                </div>
-                <div class="form-group">
-                    <label>Email Address</label>
-                    <input type="email" id="upEmail" readonly style="opacity:0.7; cursor:not-allowed;">
-                </div>
-                <button class="btn primary w-100" id="saveUserProfileBtn">Save Profile</button>
-                
-                <button id="adminPanelReentryBtnProfile" class="btn warning w-100 mt-3" style="display:none; transition: all 0.3s; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3); font-weight: bold; justify-content: center;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                    Admin Panel
-                </button>
-                
-                <hr style="margin:20px 0; border:1px solid var(--glass-border);">
-                
-                <h3>My Requests</h3>
-                <div id="userRequestsList" class="mt-3">
-                    <p class="text-secondary text-sm">Loading requests...</p>
-                </div>
-                
-                <hr style="margin:20px 0; border:1px solid var(--glass-border);">
-                
-                <h3>My Applications (Jobs)</h3>
-                <div id="userApplicationsList" class="mt-3">
-                    <p class="text-secondary text-sm">Loading applications...</p>
-                </div>
 
-                <div id="jobProfileSection" style="display:none;">
-                    <hr style="margin:20px 0; border:1px solid var(--glass-border);">
-                    <h3>My Job Profile</h3>
-                    <p class="text-secondary text-sm mb-3">You are an approved editor! Manage your clients and messages.</p>
-                    <button class="btn primary w-100 mb-2" id="openJobProfileBtn">Open Job Dashboard</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Review Modal -->
     <div class="modal-overlay" id="reviewModal" style="display: none;">
@@ -664,6 +754,138 @@
             </div>
             <div class="modal-body">
                 <div id="adminRequestsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="logoutConfirmModal" style="display: none;">
+        <div class="modal-card" style="max-width: 350px; text-align: center; padding: 20px;">
+            <div style="margin-bottom: 15px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" class="text-primary mx-auto" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 15px; color: var(--primary);"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                <h3 style="margin-bottom: 10px; font-size: 1.25rem;">Confirm Logout</h3>
+                <p class="text-secondary" style="font-size: 0.9rem;">Are you sure you want to log out of your account?</p>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                <button class="btn secondary" id="cancelLogoutBtn" style="flex: 1;">Cancel</button>
+                <button class="btn primary" id="confirmLogoutBtn" style="flex: 1; background: var(--danger); border-color: var(--danger);">Log Out</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Modal -->
+    <style>
+        .custom-radio {
+            display: flex; align-items: center; gap: 10px; padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; color: white;
+        }
+        .custom-radio:last-child {
+            border-bottom: none;
+        }
+        .custom-radio input[type="radio"] {
+            accent-color: var(--primary); width: 20px; height: 20px; cursor: pointer;
+        }
+        .filter-tab {
+            padding: 15px 20px; cursor: pointer; color: var(--text-secondary); transition: all 0.2s ease; border-left: 3px solid transparent; font-weight: 500; font-size: 0.95rem;
+        }
+        .filter-tab:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .filter-tab.active {
+            background: rgba(255,255,255,0.1); color: white; border-left-color: var(--primary);
+        }
+        .filter-pane {
+            display: none; height: 100%;
+        }
+        .filter-pane.active {
+            display: block; animation: fadeIn 0.3s ease;
+        }
+        
+        #filterModal { padding: 0; align-items: flex-end; }
+        #filterModal .modal-card {
+            width: 100%; max-width: 800px; height: 75vh; max-height: 75vh; margin: 0 auto; border-radius: 20px 20px 0 0; display: flex; flex-direction: column; background: var(--bg-color); border: 1px solid var(--glass-border);
+        }
+        
+        @media (max-width: 600px) {
+            #filterModal .modal-card {
+                height: 85vh;
+                max-height: 85vh;
+            }
+        }
+
+        @keyframes shakeError {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .error-field {
+            background: rgba(255, 0, 0, 0.1) !important;
+            border: 1px solid rgba(255, 0, 0, 0.5) !important;
+            animation: shakeError 0.4s ease-in-out;
+        }
+
+        @keyframes drawStroke {
+            100% { stroke-dashoffset: 0; }
+        }
+        @keyframes scaleUp {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+    </style>
+    <div class="modal-overlay" id="filterModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header" style="border-bottom: 1px solid var(--glass-border); padding: 15px 20px;">
+                <h3 style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                    Filters & Sort
+                </h3>
+                <span class="close" id="closeFilterModal">&times;</span>
+            </div>
+            <div class="modal-body" style="flex: 1; overflow: hidden; padding: 0; display: flex;">
+                 <!-- Left sidebar for categories -->
+                 <div style="width: 35%; max-width: 200px; background: rgba(0,0,0,0.2); border-right: 1px solid var(--glass-border); overflow-y: auto;">
+                    <div class="filter-tab active" data-target="filterCategoryPanel">Category</div>
+                    <div class="filter-tab" data-target="filterSortPanel">Sort By</div>
+                    <div class="filter-tab" data-target="filterRatingPanel">Rating</div>
+                    <div class="filter-tab" data-target="filterTypePanel">Editor Type</div>
+                    <div class="filter-tab" data-target="filterBudgetPanel">Budget</div>
+                 </div>
+                 <!-- Right side for options -->
+                 <div style="flex: 1; padding: 10px 20px; overflow-y: auto;">
+                     <div id="filterCategoryPanel" class="filter-pane active">
+                         <label class="custom-radio"><input type="radio" name="modalCategory" value="All" checked> <span>All Categories</span></label>
+                         <label class="custom-radio"><input type="radio" name="modalCategory" value="Video"> <span>Video Editing</span></label>
+                         <label class="custom-radio"><input type="radio" name="modalCategory" value="Photo"> <span>Photo Retouching</span></label>
+                         <label class="custom-radio"><input type="radio" name="modalCategory" value="Motion"> <span>Motion Graphics</span></label>
+                         <label class="custom-radio"><input type="radio" name="modalCategory" value="Audio"> <span>Audio Post-Production</span></label>
+                     </div>
+                     <div id="filterSortPanel" class="filter-pane">
+                         <label class="custom-radio"><input type="radio" name="modalSort" value="None" checked> <span>Relevance</span></label>
+                         <label class="custom-radio"><input type="radio" name="modalSort" value="LowToHigh"> <span>Price: Low to High</span></label>
+                         <label class="custom-radio"><input type="radio" name="modalSort" value="HighToLow"> <span>Price: High to Low</span></label>
+                     </div>
+                     <div id="filterRatingPanel" class="filter-pane">
+                         <label class="custom-radio"><input type="radio" name="modalRating" value="All" checked> <span>⭐ All Ratings</span></label>
+                         <label class="custom-radio"><input type="radio" name="modalRating" value="4+"> <span>⭐ 4.0 & Above</span></label>
+                         <label class="custom-radio"><input type="radio" name="modalRating" value="3+"> <span>⭐ 3.0 & Above</span></label>
+                     </div>
+                     <div id="filterTypePanel" class="filter-pane">
+                         <label class="custom-radio"><input type="radio" name="modalType" value="All" checked> <span>👤 All Editors</span></label>
+                         <label class="custom-radio"><input type="radio" name="modalType" value="New"> <span>New Editors</span></label>
+                         <label class="custom-radio"><input type="radio" name="modalType" value="Experienced"> <span>Experienced</span></label>
+                     </div>
+                     <div id="filterBudgetPanel" class="filter-pane" style="padding-top: 15px;">
+                         <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px;">
+                            <input type="number" id="modalMinBudget" class="form-control" placeholder="Min ₹" min="0" style="flex: 1; min-width: 0;">
+                            <span>to</span>
+                            <input type="number" id="modalMaxBudget" class="form-control" placeholder="Max ₹" min="0" style="flex: 1; min-width: 0;">
+                         </div>
+                     </div>
+                 </div>
+            </div>
+            <div class="modal-footer" style="padding: 15px 20px; display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid var(--glass-border); background: var(--glass-bg);">
+                 <button class="btn secondary" id="clearFiltersBtn" style="flex: 1; max-width: 150px;">Clear All</button>
+                 <button class="btn primary" id="applyFiltersModalBtn" style="flex: 1; max-width: 150px;">Apply</button>
             </div>
         </div>
     </div>
@@ -778,8 +1000,8 @@
                     <button class="btn admin-tab-btn" data-tab="users" style="background: transparent; color: white; text-align: left; justify-content: flex-start; border: none; padding: 12px 15px;">🧑‍💻 Registered Users</button>
                     <button class="btn admin-tab-btn" data-tab="ai_assistant" style="background: transparent; color: white; text-align: left; justify-content: flex-start; border: none; padding: 12px 15px; color: #a180ff;">✨ AI Studio</button>
                     <button class="btn admin-tab-btn" data-tab="superadmin" style="background: transparent; color: white; text-align: left; justify-content: flex-start; border: none; padding: 12px 15px; color: var(--warning);">🛠️ Developer Access</button>
-                    <button class="btn admin-tab-btn" id="adminSupportChatsBtn" style="background: transparent; color: white; text-align: left; justify-content: flex-start; border: none; padding: 12px 15px; position:relative;">
-                        💬 Support Chats
+                    <button class="btn admin-tab-btn" data-tab="support_chats" id="adminSupportChatsBtn" style="background: transparent; color: white; text-align: left; justify-content: flex-start; border: none; padding: 12px 15px; position:relative;">
+                        💬 Intercepted Chats
                         <span id="adminUnreadSupportBadge" style="display:none; position:absolute; right:15px; background:red; color:white; border-radius:50%; width:20px; height:20px; font-size:12px; align-items:center; justify-content:center;">0</span>
                     </button>
                 </nav>
@@ -866,7 +1088,30 @@
 
                 <!-- Tab: Job Applications -->
                 <div id="adminTabApplications" class="admin-tab-content" style="display: none;">
-                    <h2 class="mb-4">Job Applications</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 class="mb-4 m-0">Profile Requests</h2>
+                    </div>
+
+                    <h3 class="mb-3 text-secondary text-sm">New Profile Applications</h3>
+                    <div class="table-responsive glass-card mb-4" style="border-radius: 16px; padding: 20px;">
+                        <table class="admin-table w-100">
+                            <thead>
+                                <tr>
+                                    <th>Photo</th>
+                                    <th>User/Name</th>
+                                    <th>Category</th>
+                                    <th title="Time remaining for 48h SLA">Time Left</th>
+                                    <th>Applied On</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminJobAppsList">
+                                <tr><td colspan="6" class="text-center text-secondary text-sm">No new applications.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 class="mb-3 text-secondary text-sm">Profile Update Requests</h3>
                     <div class="table-responsive glass-card" style="border-radius: 16px; padding: 20px;">
                         <table class="admin-table w-100">
                             <thead>
@@ -874,13 +1119,13 @@
                                     <th>Photo</th>
                                     <th>User/Name</th>
                                     <th>Category</th>
-                                    <th>Price</th>
+                                    <th title="Time remaining for 48h SLA">Time Left</th>
                                     <th>Applied On</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="adminJobAppsList">
-                                <tr><td colspan="6" class="text-center text-secondary text-sm">No new applications.</td></tr>
+                            <tbody id="adminUpdateAppsList">
+                                <tr><td colspan="6" class="text-center text-secondary text-sm">No profile update requests.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1002,6 +1247,29 @@
                 </div>
 
                 <!-- Tab: Super Admin -->
+                <!-- Tab: Support / Intercepted Chats -->
+                <div id="adminTabSupportChats" class="admin-tab-content" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 class="m-0">Client-Editor Chats</h2>
+                    </div>
+                    <div class="table-responsive glass-card mb-4" style="border-radius: 16px; padding: 20px;">
+                        <table class="admin-table w-100">
+                            <thead>
+                                <tr>
+                                    <th>Client (User)</th>
+                                    <th>Editor</th>
+                                    <th>Last Updated</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminSupportChatsList">
+                                <tr><td colspan="4" class="text-center text-secondary text-sm">No chats found.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab: Superadmin -->
                 <div id="adminTabSuperadmin" class="admin-tab-content" style="display: none;">
                     <div id="superadminAuthSection" style="max-width: 400px; margin: 50px auto; text-align: center;" class="glass-card p-5">
                         <h2 class="mb-4 text-warning">Developer Access Only</h2>
@@ -1318,10 +1586,7 @@
         </div>
     </div>
 
-    <!-- AI Support FAB -->
-    <button id="aiSupportFab" class="glass-btn" style="position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; background: var(--primary); color: white; border: none; cursor: pointer; transition: transform 0.2s ease;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-    </button>
+
 
     <!-- AI Support Chat Modal -->
     <div class="modal-overlay" id="aiSupportChatModal" style="display: none; z-index: 2000;">

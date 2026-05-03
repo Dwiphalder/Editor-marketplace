@@ -151,8 +151,6 @@ const userAvatar = document.getElementById('userAvatar');
 const searchInput = document.getElementById('searchInput');
 
 // Add specific elements for user profile
-const userProfileModal = document.getElementById('userProfileModal');
-const closeUserProfile = document.getElementById('closeUserProfile');
 const bottomNavProfile = document.getElementById('bottomNavProfile');
 const bottomNavHome = document.getElementById('bottomNavHome');
 const bottomNavJobs = document.getElementById('bottomNavJobs');
@@ -175,29 +173,69 @@ const loadingMain = document.getElementById('loadingMain');
 const emptyMain = document.getElementById('emptyMain');
 const filterChips = document.querySelectorAll('.filter-chip');
 const toggleFiltersBtn = document.getElementById('toggleFiltersBtn');
-const filterContainer = document.getElementById('filterContainer');
+const toggleFiltersBtnResults = document.getElementById('toggleFiltersBtnResults');
+const filterModal = document.getElementById('filterModal');
 
-if (toggleFiltersBtn && filterContainer) {
+if (toggleFiltersBtn) {
     toggleFiltersBtn.addEventListener('click', () => {
-        if (filterContainer.style.display === 'none') {
-            filterContainer.style.display = 'block';
-        } else {
-            filterContainer.style.display = 'none';
-        }
+        openModal(filterModal);
+    });
+}
+if (toggleFiltersBtnResults) {
+    toggleFiltersBtnResults.addEventListener('click', () => {
+        openModal(filterModal);
     });
 }
 
-const toggleFiltersBtnResults = document.getElementById('toggleFiltersBtnResults');
-const filterContainerResults = document.getElementById('filterContainerResults');
+const closeFilterModal = document.getElementById('closeFilterModal');
+if(closeFilterModal) closeFilterModal.addEventListener('click', () => closeModal(filterModal));
 
-if (toggleFiltersBtnResults && filterContainerResults) {
-    toggleFiltersBtnResults.addEventListener('click', () => {
-        if (filterContainerResults.style.display === 'none') {
-            filterContainerResults.style.display = 'block';
-        } else {
-            filterContainerResults.style.display = 'none';
-        }
+// Modal Tabs Logic
+const filterTabs = document.querySelectorAll('.filter-tab');
+const filterPanes = document.querySelectorAll('.filter-pane');
+
+filterTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        filterTabs.forEach(t => t.classList.remove('active'));
+        filterPanes.forEach(p => p.classList.remove('active'));
+        
+        tab.classList.add('active');
+        const targetId = tab.getAttribute('data-target');
+        const targetPane = document.getElementById(targetId);
+        if (targetPane) targetPane.classList.add('active');
     });
+});
+
+window.openModal = function(modal) {
+    if(!modal) return;
+    if(userSettings.animations && !userSettings.lowEnd) {
+        modal.style.display = 'flex';
+        modal.style.animation = 'fadeInModal 0.3s ease forwards';
+        const card = modal.querySelector('.modal-card');
+        if(card) {
+            card.style.animation = 'zoomInModal 0.3s ease forwards';
+        }
+    } else {
+        modal.style.display = 'flex';
+    }
+}
+
+window.closeModal = function(modal) {
+    if(!modal) return;
+    if(userSettings.animations && !userSettings.lowEnd) {
+        modal.style.animation = 'fadeOutModal 0.3s ease forwards';
+        const card = modal.querySelector('.modal-card');
+        if(card) {
+            card.style.animation = 'zoomOutModal 0.3s ease forwards';
+        }
+        setTimeout(() => {
+            modal.style.display = 'none';
+            modal.style.animation = '';
+            if(card) card.style.animation = '';
+        }, 280);
+    } else {
+        modal.style.display = 'none';
+    }
 }
 
 // DOM Elements - Modals
@@ -562,57 +600,161 @@ if(loginBtn) loginBtn.addEventListener('click', () => {
     signOut(auth); // A small hack to return to splash page
 });
 if(document.getElementById('signInGoogleBtn')) document.getElementById('signInGoogleBtn').addEventListener('click', handleGoogleLogin);
+const logoutConfirmModal = document.getElementById('logoutConfirmModal');
+
 if(logoutBtn) logoutBtn.addEventListener('click', () => {
-    signOut(auth);
+    openModal(logoutConfirmModal);
 });
+
+if(document.getElementById('cancelLogoutBtn')) {
+    document.getElementById('cancelLogoutBtn').addEventListener('click', () => {
+        closeModal(logoutConfirmModal);
+    });
+}
+
+if(document.getElementById('confirmLogoutBtn')) {
+    document.getElementById('confirmLogoutBtn').addEventListener('click', () => {
+        closeModal(logoutConfirmModal);
+        signOut(auth);
+    });
+}
 
 if(userAvatar) {
     userAvatar.style.cursor = 'pointer';
     userAvatar.addEventListener('click', () => {
-        window.openUserProfileModal(false);
+        window.openUserProfileView();
     });
 }
 if(bottomNavProfile) {
     bottomNavProfile.addEventListener('click', (e) => {
         e.preventDefault();
-        window.openUserProfileModal(false);
+        window.openUserProfileView();
     });
 }
+function animateViewSwitch(newViewEl, oldViewElements, callback) {
+    if (!userSettings.animations || userSettings.lowEnd) {
+        oldViewElements.forEach(el => { if(el) el.style.display = 'none'; });
+        if(newViewEl) newViewEl.style.display = 'block';
+        if(callback) callback();
+        return;
+    }
+
+    let delay = 0;
+    let anyVisible = false;
+
+    oldViewElements.forEach(el => {
+        if(el && el.style.display !== 'none') {
+            anyVisible = true;
+            el.style.animation = 'fadeOutUp 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards';
+            setTimeout(() => {
+                el.style.display = 'none';
+                el.style.animation = '';
+            }, 200);
+        }
+    });
+
+    if (anyVisible) delay = 200;
+
+    if(newViewEl) {
+        setTimeout(() => {
+            newViewEl.style.display = 'block';
+            newViewEl.style.animation = 'fadeInUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
+            if(callback) callback();
+        }, delay);
+    } else {
+        setTimeout(() => {
+            if(callback) callback();
+        }, delay);
+    }
+}
+
+window.goToWizardStep = function(targetStep, currentStep = null) {
+    if (currentStep !== null && targetStep > currentStep) {
+        // Validate current step
+        let idsToValidate = [];
+        if (currentStep === 1) idsToValidate = ['jobName', 'jobEmail', 'jobPhone'];
+        if (currentStep === 2) idsToValidate = ['jobCategory', 'jobPrice', 'jobExperience'];
+        if (currentStep === 3) idsToValidate = ['jobSkills', 'jobBio'];
+        if (currentStep === 4) idsToValidate = ['jobAvatarUrl', 'jobBannerUrl'];
+        
+        let isValid = true;
+        idsToValidate.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                // If it's a hidden input for image URL, validate the value but highlight the button instead
+                let errorTarget = el;
+                if (id === 'jobAvatarUrl') {
+                    errorTarget = document.getElementById('jobAvatarUpload').nextElementSibling; // The button
+                } else if (id === 'jobBannerUrl') {
+                    errorTarget = document.getElementById('jobBannerUpload').nextElementSibling; // The button
+                }
+
+                errorTarget.classList.remove('error-field');
+                // Trigger reflow to restart animation
+                void errorTarget.offsetWidth;
+                if (!el.value || el.value.trim() === '') {
+                    isValid = false;
+                    errorTarget.classList.add('error-field');
+                }
+            }
+        });
+        
+        if (!isValid) {
+            playTick(); // Or error sound if we had one
+            return; // Prevent step change
+        }
+    }
+
+    for (let i = 1; i <= 4; i++) {
+        const stepEl = document.getElementById('wizardStep' + i);
+        if (stepEl) {
+            stepEl.style.display = i === targetStep ? 'block' : 'none';
+        }
+    }
+    const progressSegments = document.querySelectorAll('#jobsProgressBar .progress-segment');
+    progressSegments.forEach((seg, idx) => {
+        if (idx < targetStep) {
+            seg.style.background = 'var(--primary)';
+        } else {
+            seg.style.background = 'rgba(255,255,255,0.1)';
+        }
+    });
+};
+
 window.switchNavView = function(view) {
+    const searchResultsView = document.getElementById('searchResultsView');
+    const profileView = document.getElementById('profileView');
+    
     if(view === 'home') {
-        if(homeView) homeView.style.display = 'block';
-        if(jobsView) jobsView.style.display = 'none';
-        if(wishlistView) wishlistView.style.display = 'none';
-        if(document.getElementById('searchResultsView')) document.getElementById('searchResultsView').style.display = 'none';
+        animateViewSwitch(homeView, [jobsView, wishlistView, searchResultsView, profileView]);
         if(bottomNavHome) bottomNavHome.classList.add('active');
         if(bottomNavJobs) bottomNavJobs.classList.remove('active');
         if(bottomNavWishlist) bottomNavWishlist.classList.remove('active');
+        if(bottomNavProfile) bottomNavProfile.classList.remove('active');
     } else if(view === 'jobs') {
-        if(homeView) homeView.style.display = 'none';
-        if(jobsView) jobsView.style.display = 'block';
-        if(wishlistView) wishlistView.style.display = 'none';
-        if(document.getElementById('searchResultsView')) document.getElementById('searchResultsView').style.display = 'none';
+        animateViewSwitch(jobsView, [homeView, wishlistView, searchResultsView, profileView], populateJobFormFromProfile);
         if(bottomNavJobs) bottomNavJobs.classList.add('active');
         if(bottomNavHome) bottomNavHome.classList.remove('active');
         if(bottomNavWishlist) bottomNavWishlist.classList.remove('active');
-        populateJobFormFromProfile();
+        if(bottomNavProfile) bottomNavProfile.classList.remove('active');
     } else if(view === 'wishlist') {
-        if(homeView) homeView.style.display = 'none';
-        if(jobsView) jobsView.style.display = 'none';
-        if(wishlistView) wishlistView.style.display = 'block';
-        if(document.getElementById('searchResultsView')) document.getElementById('searchResultsView').style.display = 'none';
+        animateViewSwitch(wishlistView, [homeView, jobsView, searchResultsView, profileView], renderWishlist);
         if(bottomNavWishlist) bottomNavWishlist.classList.add('active');
         if(bottomNavHome) bottomNavHome.classList.remove('active');
         if(bottomNavJobs) bottomNavJobs.classList.remove('active');
-        renderWishlist();
+        if(bottomNavProfile) bottomNavProfile.classList.remove('active');
     } else if(view === 'searchResults') {
-        if(homeView) homeView.style.display = 'none';
-        if(jobsView) jobsView.style.display = 'none';
-        if(wishlistView) wishlistView.style.display = 'none';
-        if(document.getElementById('searchResultsView')) document.getElementById('searchResultsView').style.display = 'block';
+        animateViewSwitch(searchResultsView, [homeView, jobsView, wishlistView, profileView]);
         if(bottomNavWishlist) bottomNavWishlist.classList.remove('active');
         if(bottomNavHome) bottomNavHome.classList.remove('active');
         if(bottomNavJobs) bottomNavJobs.classList.remove('active');
+        if(bottomNavProfile) bottomNavProfile.classList.remove('active');
+    } else if(view === 'profile') {
+        animateViewSwitch(profileView, [homeView, jobsView, wishlistView, searchResultsView], populateUserProfileData);
+        if(bottomNavProfile) bottomNavProfile.classList.add('active');
+        if(bottomNavHome) bottomNavHome.classList.remove('active');
+        if(bottomNavJobs) bottomNavJobs.classList.remove('active');
+        if(bottomNavWishlist) bottomNavWishlist.classList.remove('active');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
@@ -633,7 +775,17 @@ if(bottomNavHome && bottomNavJobs && bottomNavWishlist) {
 }
 
 function populateJobFormFromProfile() {
+    if(typeof window.goToWizardStep === 'function') window.goToWizardStep(1);
     const jobsMsg = document.getElementById('jobsCompleteProfileMsg');
+    
+    const jobsFormContainer = document.getElementById('jobsFormContainer');
+    const jobsStatusContainer = document.getElementById('jobsStatusContainer');
+    const jobsHeaderSection = document.getElementById('jobsHeaderSection');
+    
+    if (jobsFormContainer) jobsFormContainer.style.display = 'block';
+    if (jobsStatusContainer) jobsStatusContainer.style.display = 'none';
+    if (jobsHeaderSection) jobsHeaderSection.style.display = 'block';
+
     if(!currentUser) {
         if(jobsMsg) jobsMsg.classList.remove('hidden');
         if(document.getElementById('submitJobReqBtn')) document.getElementById('submitJobReqBtn').disabled = true;
@@ -641,25 +793,164 @@ function populateJobFormFromProfile() {
     }
     const up = allUsers[currentUser.uid] || {};
     
-    // Check if user is already an editor
-    const isAlreadyEditor = editors.find(e => e.userId === currentUser.uid);
-    if(isAlreadyEditor) {
-        if(jobsMsg) {
-            jobsMsg.classList.remove('hidden');
-            jobsMsg.innerHTML = `<p class="text-danger text-center">You already have an active job profile.</p>`;
+    // Check if user is already an editor or has an application
+    const isAlreadyEditor = editors.find(e => e.userId === currentUser.uid && !e.deletionScheduledAt);
+    const pendingApp = allApplications.find(a => a.userId === currentUser.uid && !a.deletionScheduledAt);
+    
+    const displayEntity = isAlreadyEditor || pendingApp;
+
+    if(displayEntity) {
+        if (jobsFormContainer) jobsFormContainer.style.display = 'none';
+        if (jobsHeaderSection) jobsHeaderSection.style.display = 'none';
+        if (jobsStatusContainer) {
+            jobsStatusContainer.style.display = 'block';
+            
+            const statusTitle = jobsStatusContainer.querySelector('h2');
+            const statusMsg = jobsStatusContainer.querySelector('p.text-secondary') || jobsStatusContainer.querySelectorAll('p')[0];
+            const countdownContainer = document.getElementById('countdownHours').parentElement.parentElement;
+            
+            const isUpdatePending = isAlreadyEditor && pendingApp && pendingApp.status === 'pending';
+
+            if (isUpdatePending) {
+                statusTitle.textContent = "Profile Updates Under Review";
+                statusMsg.textContent = "Your creator profile is live, but your recent updates are currently being reviewed.";
+                statusTitle.style.color = "var(--warning)";
+                if (jobsStatusContainer.querySelector('svg')) {
+                    jobsStatusContainer.querySelector('svg').outerHTML = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 3s linear infinite;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
+                }
+                countdownContainer.style.display = 'none';
+            } else if (isAlreadyEditor || (pendingApp && pendingApp.status === 'approved')) {
+                statusTitle.textContent = "Profile is Live & Verified!";
+                statusMsg.textContent = "Your creator profile has been approved and is public on the platform.";
+                statusTitle.style.color = "var(--success)";
+                if (jobsStatusContainer.querySelector('svg')) {
+                    jobsStatusContainer.querySelector('svg').outerHTML = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+                }
+                countdownContainer.style.display = 'none';
+            } else if (pendingApp) {
+                statusTitle.textContent = "Application Under Review";
+                statusMsg.textContent = "Your profile has been submitted and is currently being reviewed. The process can take up to 48 hours.";
+                statusTitle.style.color = "white";
+                if (jobsStatusContainer.querySelector('svg')) {
+                    jobsStatusContainer.querySelector('svg').outerHTML = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 3s linear infinite;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
+                }
+                countdownContainer.style.display = 'flex';
+                
+                const applicationTime = pendingApp.timestamp || Date.now();
+                const targetTime = applicationTime + (48 * 60 * 60 * 1000);
+                
+                if(window.jobsCountdownInterval) clearInterval(window.jobsCountdownInterval);
+                window.jobsCountdownInterval = setInterval(() => {
+                    const now = Date.now();
+                    const diff = targetTime - now;
+                    if(diff <= 0) {
+                        document.getElementById('countdownHours').textContent = '00';
+                        document.getElementById('countdownMinutes').textContent = '00';
+                        document.getElementById('countdownSeconds').textContent = '00';
+                        clearInterval(window.jobsCountdownInterval);
+                    } else {
+                        const h = Math.floor((diff / (1000 * 60 * 60)));
+                        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                        const s = Math.floor((diff % (1000 * 60)) / 1000);
+                        document.getElementById('countdownHours').textContent = h.toString().padStart(2, '0');
+                        document.getElementById('countdownMinutes').textContent = m.toString().padStart(2, '0');
+                        document.getElementById('countdownSeconds').textContent = s.toString().padStart(2, '0');
+                    }
+                }, 1000);
+            }
+            
+            // Setup Profile Preview
+            let tempEntity = { ...displayEntity };
+            const pBanner = document.getElementById('previewBannerImg');
+            const pAvatar = document.getElementById('previewAvatarImg');
+            const pName = document.getElementById('previewNameTxt');
+            const pCat = document.getElementById('previewCatTxt');
+            const pBio = document.getElementById('previewBioTxt');
+            
+            if (pBanner) pBanner.src = tempEntity.banner_url || '';
+            if (pAvatar) pAvatar.src = tempEntity.photo_url || window.DEFAULT_AVATAR;
+            if (pName) pName.textContent = tempEntity.name || 'Your Name';
+            if (pCat) pCat.textContent = tempEntity.category || 'Category';
+            if (pBio) pBio.textContent = tempEntity.bio || 'Please write a bio to attract clients...';
+
+            // Bind edit button
+            const editBtn = document.getElementById('editPendingAppBtn');
+            const editResetWarningModal = document.getElementById('editResetWarningModal');
+            const cancelEditWarningBtn = document.getElementById('cancelEditWarningBtn');
+            const confirmEditWarningBtn = document.getElementById('confirmEditWarningBtn');
+
+            const enterEditMode = () => {
+                jobsStatusContainer.style.display = 'none';
+                jobsFormContainer.style.display = 'block';
+                if (jobsHeaderSection) jobsHeaderSection.style.display = 'block';
+                
+                // We need to inject the data back into the form fields
+                document.getElementById('submitJobReqBtn').dataset.updateId = pendingApp ? pendingApp.id : '';
+                const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
+                
+                if(tempEntity) {
+                    setVal('jobName', tempEntity.name);
+                    setVal('jobEmail', tempEntity.email);
+                    setVal('jobPhone', tempEntity.phone);
+                    setVal('jobCategory', tempEntity.category);
+                    setVal('jobStyle', tempEntity.style);
+                    setVal('jobPrice', tempEntity.price);
+                    setVal('jobMaxPrice', tempEntity.maxPrice);
+                    setVal('jobExperience', tempEntity.experience);
+                    setVal('jobSkills', tempEntity.skills);
+                    setVal('jobTools', tempEntity.tools);
+                    setVal('jobBio', tempEntity.bio);
+                    setVal('jobPortfolio', tempEntity.portfolio);
+                    
+                    // Handling files preview manually
+                    document.getElementById('jobAvatarUrl').value = tempEntity.photo_url || '';
+                    if(tempEntity.photo_url) {
+                        document.getElementById('jobAvatarPreview').src = tempEntity.photo_url;
+                    }
+                    
+                    document.getElementById('jobBannerUrl').value = tempEntity.banner_url || '';
+                    if(tempEntity.banner_url) {
+                        if(document.getElementById('jobBannerPreview')) document.getElementById('jobBannerPreview').src = tempEntity.banner_url;
+                    }
+                    
+                    // Handling videos
+                    if(Array.isArray(tempEntity.videoClips)) {
+                        setVal('jobVideoClips', tempEntity.videoClips.join(', '));
+                    }
+                }
+                
+                if (typeof window.goToWizardStep === 'function') {
+                    window.goToWizardStep(1);
+                }
+            };
+
+            if(editBtn) {
+                editBtn.onclick = (e) => {
+                    e.preventDefault();
+                    if (isAlreadyEditor) {
+                        enterEditMode();
+                    } else if (editResetWarningModal) {
+                        editResetWarningModal.style.display = 'flex';
+                    }
+                };
+            }
+
+            if (cancelEditWarningBtn) {
+                cancelEditWarningBtn.onclick = () => {
+                    if (editResetWarningModal) editResetWarningModal.style.display = 'none';
+                };
+            }
+
+            if (confirmEditWarningBtn) {
+                confirmEditWarningBtn.onclick = () => {
+                    if (editResetWarningModal) editResetWarningModal.style.display = 'none';
+                    enterEditMode();
+                };
+            }
         }
-        if(document.getElementById('submitJobReqBtn')) document.getElementById('submitJobReqBtn').disabled = true;
-        
-        // Disable form fields
-        ['jobName', 'jobEmail', 'jobPhone', 'jobCategory', 'jobStyle', 'jobPrice', 'jobMaxPrice', 'jobExperience', 'jobSkills', 'jobTools', 'jobBio', 'jobVideoClips', 'jobPortfolio'].forEach(id => {
-            const el = document.getElementById(id);
-            if(el) el.disabled = true;
-        });
-        const urlEl = document.getElementById('jobBannerUrl');
-        if(urlEl) urlEl.disabled = true;
         return;
     } else {
-        if(jobsMsg) jobsMsg.innerHTML = `<p class="text-danger">Please <button class="btn btn-sm primary" onclick="window.openUserProfileModal(true)">Complete Profile</button> first. It's required for applying.</p>`;
+        if(jobsMsg) jobsMsg.innerHTML = `<p class="text-danger">Please <button class="btn btn-sm primary" onclick="window.openUserProfileView()">Complete Profile</button> first. It's required for applying.</p>`;
         // Enable form fields just in case
         ['jobName', 'jobEmail', 'jobPhone', 'jobCategory', 'jobStyle', 'jobPrice', 'jobMaxPrice', 'jobExperience', 'jobSkills', 'jobTools', 'jobBio', 'jobVideoClips', 'jobPortfolio'].forEach(id => {
             const el = document.getElementById(id);
@@ -888,9 +1179,13 @@ function renderTrending() {
 
 function renderHomeFeeds() {
     if(loadingMain) loadingMain.style.display = 'none';
-    const filterRating = document.getElementById('filterRating') ? document.getElementById('filterRating').value : 'All';
-    const filterType = document.getElementById('filterType') ? document.getElementById('filterType').value : 'All';
-    const sortPrice = document.getElementById('sortPrice') ? document.getElementById('sortPrice').value : 'None';
+    const ratingInput = document.querySelector('input[name="modalRating"]:checked');
+    const typeInput = document.querySelector('input[name="modalType"]:checked');
+    const sortInput = document.querySelector('input[name="modalSort"]:checked');
+    
+    const filterRating = ratingInput ? ratingInput.value : 'All';
+    const filterType = typeInput ? typeInput.value : 'All';
+    const sortPrice = sortInput ? sortInput.value : 'None';
 
     let baseFiltered = editors.filter(ed => {
         if (ed.deletionScheduledAt) return false;
@@ -1013,13 +1308,17 @@ function processSearch(triggeredFromResults = false) {
     if (resultsList) resultsList.innerHTML = '';
     if (emptySearch) emptySearch.style.display = 'none';
     
-    // Use the results filters, fallback to home filters if missing
-    const filterRating = document.getElementById('filterRatingResults') ? document.getElementById('filterRatingResults').value : 'All';
-    const filterType = document.getElementById('filterTypeResults') ? document.getElementById('filterTypeResults').value : 'All';
-    const sortPrice = document.getElementById('sortPriceResults') ? document.getElementById('sortPriceResults').value : 'None';
+    // Use the modal filters
+    const ratingInput = document.querySelector('input[name="modalRating"]:checked');
+    const typeInput = document.querySelector('input[name="modalType"]:checked');
+    const sortInput = document.querySelector('input[name="modalSort"]:checked');
     
-    const minBudgetInput = document.getElementById('minBudget');
-    const maxBudgetInput = document.getElementById('maxBudget');
+    const filterRating = ratingInput ? ratingInput.value : 'All';
+    const filterType = typeInput ? typeInput.value : 'All';
+    const sortPrice = sortInput ? sortInput.value : 'None';
+    
+    const minBudgetInput = document.getElementById('modalMinBudget');
+    const maxBudgetInput = document.getElementById('modalMaxBudget');
     const minBudget = minBudgetInput && minBudgetInput.value ? parseFloat(minBudgetInput.value) : 0;
     const maxBudget = maxBudgetInput && maxBudgetInput.value ? parseFloat(maxBudgetInput.value) : Infinity;
 
@@ -1162,10 +1461,45 @@ const syncFilters = () => {
     }
 };
 
-['filterRating', 'filterType', 'sortPrice', 'filterRatingResults', 'filterTypeResults', 'sortPriceResults'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.addEventListener('change', syncFilters);
-});
+const applyFiltersModalBtn = document.getElementById('applyFiltersModalBtn');
+const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+
+if (applyFiltersModalBtn) {
+    applyFiltersModalBtn.addEventListener('click', () => {
+        closeModal(filterModal);
+        
+        let category = document.querySelector('input[name="modalCategory"]:checked');
+        let selectedCat = category ? category.value : 'All';
+        
+        // Update home and search feeds based on filters
+        currentCategory = selectedCat;
+        renderHomeFeeds();
+        if (document.getElementById('searchResultsView') && document.getElementById('searchResultsView').style.display === 'block') {
+            processSearch();
+        }
+    });
+}
+
+if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener('click', () => {
+        document.querySelector('input[name="modalCategory"][value="All"]').checked = true;
+        document.querySelector('input[name="modalSort"][value="None"]').checked = true;
+        document.querySelector('input[name="modalRating"][value="All"]').checked = true;
+        document.querySelector('input[name="modalType"][value="All"]').checked = true;
+        const minBdgt = document.getElementById('modalMinBudget');
+        const maxBdgt = document.getElementById('modalMaxBudget');
+        if (minBdgt) minBdgt.value = '';
+        if (maxBdgt) maxBdgt.value = '';
+        
+        closeModal(filterModal);
+        
+        currentCategory = 'All';
+        renderHomeFeeds();
+        if (document.getElementById('searchResultsView') && document.getElementById('searchResultsView').style.display === 'block') {
+            processSearch();
+        }
+    });
+}
 
 if(document.getElementById('applyBudgetBtn')) {
     document.getElementById('applyBudgetBtn').addEventListener('click', () => processSearch(true));
@@ -1404,12 +1738,12 @@ function openEditorProfile(id) {
         }).join('') : '';
     }
 
-    profileModal.style.display = 'flex';
+    openModal(profileModal);
 }
 
-document.getElementById('closeProfileModal').addEventListener('click', () => { profileModal.style.display = 'none'; });
-if(document.getElementById('closeProfileBtn')) document.getElementById('closeProfileBtn').addEventListener('click', () => { profileModal.style.display = 'none'; });
-if(document.getElementById('closeProfileBtnMobile')) document.getElementById('closeProfileBtnMobile').addEventListener('click', () => { profileModal.style.display = 'none'; });
+document.getElementById('closeProfileModal').addEventListener('click', () => { closeModal(profileModal); });
+if(document.getElementById('closeProfileBtn')) document.getElementById('closeProfileBtn').addEventListener('click', () => { closeModal(profileModal); });
+if(document.getElementById('closeProfileBtnMobile')) document.getElementById('closeProfileBtnMobile').addEventListener('click', () => { closeModal(profileModal); });
 
 const wishlistSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); // short pop sound
 
@@ -1474,8 +1808,8 @@ document.getElementById('contactEditorBtn').addEventListener('click', async () =
     // Check if profile is complete
     const up = allUsers[currentUser.uid];
     if (!up || !up.firstName || !up.lastName || !up.phone) {
-        profileModal.style.display = 'none';
-        window.openUserProfileModal(true);
+        closeModal(profileModal);
+        window.openUserProfileView();
         return;
     }
     
@@ -1538,11 +1872,8 @@ document.getElementById('closeReviewModal').addEventListener('click', () => {
 });
 
 // User Profile Logic
-window.openUserProfileModal = function(showMustComplete = false) {
-    if (!currentUser) {
-        loginPromptModal.style.display = 'flex';
-        return;
-    }
+window.populateUserProfileData = function(showMustComplete = false) {
+    if (!currentUser) return;
     const up = allUsers[currentUser.uid] || {};
     document.getElementById('upFirstName').value = up.firstName || '';
     document.getElementById('upLastName').value = up.lastName || '';
@@ -1586,8 +1917,15 @@ window.openUserProfileModal = function(showMustComplete = false) {
             adminPanelReentryBtnProfile.style.display = 'none';
         }
     }
-    
-    userProfileModal.style.display = 'flex';
+};
+
+window.openUserProfileView = function(showMustComplete = false) {
+    if (!currentUser) {
+        loginPromptModal.style.display = 'flex';
+        return;
+    }
+    window.switchNavView('profile');
+    window.populateUserProfileData(showMustComplete);
 };
 
 function renderUserApplicationsList() {
@@ -1679,7 +2017,6 @@ window.editUserJobApp = (appId) => {
     if(!app) return;
     
     // Switch to jobs view
-    userProfileModal.style.display = 'none';
     window.switchNavView('jobs');
     
     // Fill the jobs form with the data safely
@@ -1722,7 +2059,7 @@ window.editUserJobApp = (appId) => {
 
 function renderUserRequestsList() {
     const list = document.getElementById('userRequestsList');
-    if (!currentUser) return;
+    if (!list || !currentUser) return;
     const reqs = allRequests.filter(r => r.userId === currentUser.uid);
     if(reqs.length === 0) {
         list.innerHTML = '<p class="text-secondary text-sm">No ongoing or past requests.</p>';
@@ -1746,9 +2083,7 @@ function renderUserRequestsList() {
     }).join('');
 }
 
-closeUserProfile.addEventListener('click', () => {
-    userProfileModal.style.display = 'none';
-});
+
 
 upAvatarUpload.addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -1813,7 +2148,10 @@ saveUserProfileBtn.addEventListener('click', async () => {
             userAvatar.src = payload.photoUrl;
         }
         
-        userProfileModal.style.display = 'none';
+        // Show success alert
+        alert('Profile saved successfully!');
+        window.populateUserProfileData();
+        
     } catch(err) {
         console.error(err);
         alert('Failed to save profile. ' + err.message);
@@ -1994,7 +2332,7 @@ document.addEventListener('mousemove', (e) => {
 // Settings & Hidden Admin Access
 // ==========================================
 if(settingsBtn) settingsBtn.addEventListener('click', () => {
-    settingsModal.style.display = 'flex';
+    openModal(settingsModal);
     const adminPanelReentryBtn = document.getElementById('adminPanelReentryBtn');
     if (adminPanelReentryBtn) {
         if (window.currentUserIsAdmin) {
@@ -2007,7 +2345,7 @@ if(settingsBtn) settingsBtn.addEventListener('click', () => {
 const authScreenSettingsBtn = document.getElementById('authScreenSettingsBtn');
 if(authScreenSettingsBtn) { 
     authScreenSettingsBtn.addEventListener('click', () => { 
-        settingsModal.style.display = 'flex'; 
+        openModal(settingsModal); 
         const adminPanelReentryBtn = document.getElementById('adminPanelReentryBtn');
         if (adminPanelReentryBtn) {
             if (window.currentUserIsAdmin) {
@@ -2019,14 +2357,13 @@ if(authScreenSettingsBtn) {
     }); 
 }
 
-if(closeSettings) closeSettings.addEventListener('click', () => { settingsModal.style.display = 'none'; });
+if(closeSettings) closeSettings.addEventListener('click', () => { closeModal(settingsModal); });
 
 const adminPanelReentryBtn = document.getElementById('adminPanelReentryBtn');
 const adminPanelReentryBtnProfile = document.getElementById('adminPanelReentryBtnProfile');
 
 function enterAdminPanel() {
-    settingsModal.style.display = 'none';
-    userProfileModal.style.display = 'none';
+    closeModal(settingsModal);
     document.getElementById('mainApp').style.display = 'none';
     document.getElementById('welcomeScreen').style.display = 'none';
     document.getElementById('adminPanelOverlay').style.display = 'block';
@@ -2059,7 +2396,7 @@ if(document.getElementById('saveSettingsBtn')) document.getElementById('saveSett
     
     localStorage.setItem('lumina_settings', JSON.stringify(userSettings));
     applySettings();
-    settingsModal.style.display = 'none';
+    closeModal(settingsModal);
 });
 
 // Admin Unlock Logic
@@ -2072,8 +2409,8 @@ if(appVersionTracker) appVersionTracker.addEventListener('click', () => {
     adminClickCount++;
     if (adminClickCount >= 5) {
         adminClickCount = 0;
-        settingsModal.style.display = 'none';
-        adminPinModal.style.display = 'flex';
+        closeModal(settingsModal);
+        openModal(adminPinModal);
     }
     clearTimeout(adminClickTimer);
     adminClickTimer = setTimeout(() => { adminClickCount = 0; }, 2000);
@@ -2140,6 +2477,7 @@ adminTabBtns.forEach(btn => {
 
 function renderAdminList() {
     if (typeof setupAdminSupportListener === 'function') setupAdminSupportListener();
+    if (typeof setupAdminInterceptListener === 'function') setupAdminInterceptListener();
     const totalUsers = Object.keys(allUsers || {}).length;
     const totalViews = editors.reduce((sum, ed) => sum + (ed.views || 0), 0);
     
@@ -2188,28 +2526,69 @@ function renderAdminList() {
     });
 
     const appsTbody = document.getElementById('adminJobAppsList');
-    if(appsTbody) {
+    const updatesTbody = document.getElementById('adminUpdateAppsList');
+    if(appsTbody && updatesTbody) {
         appsTbody.innerHTML = '';
-        const pendingApps = allApplications.filter(a => a.status === 'pending');
-        if(pendingApps.length === 0) {
+        updatesTbody.innerHTML = '';
+        
+        const pendingApps = allApplications.filter(a => a.status === 'pending').sort((a, b) => {
+            const timeA = a.timestamp || Date.now();
+            const timeB = b.timestamp || Date.now();
+            return timeA - timeB; // Oldest first
+        });
+        
+        const newApps = [];
+        const updateApps = [];
+        
+        pendingApps.forEach(app => {
+            if (editors.some(e => e.userId === app.userId)) {
+                updateApps.push(app);
+            } else {
+                newApps.push(app);
+            }
+        });
+
+        const renderAppRow = (app) => {
+            const tr = document.createElement('tr');
+            
+            // Calculate time left (48 hours from timestamp)
+            const applicationTime = app.timestamp || Date.now();
+            const targetTime = applicationTime + (48 * 60 * 60 * 1000);
+            const diff = targetTime - Date.now();
+            let timeLeftHtml = '';
+            if (diff <= 0) {
+                timeLeftHtml = `<span class="text-danger" style="font-weight: 600;">Overdue</span>`;
+            } else {
+                const h = Math.floor(diff / (1000 * 60 * 60));
+                const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                timeLeftHtml = `<span class="${h < 12 ? 'text-danger' : (h < 24 ? 'text-warning' : 'text-success')}">${h}h ${m}m</span>`;
+            }
+
+            tr.innerHTML = `
+                <td><img src="${app.photo_url || window.DEFAULT_AVATAR}" class="table-img"></td>
+                <td><strong>${app.name}</strong><br><span class="text-xs text-secondary">${app.email}</span><br><span class="text-xs text-secondary">${app.phone || 'No phone'}</span></td>
+                <td><span class="category-tag">${app.category}</span></td>
+                <td>${timeLeftHtml}</td>
+                <td>${new Date(app.timestamp).toLocaleDateString()}</td>
+                <td style="display: flex; gap: 5px;">
+                    <button class="btn btn-sm" style="background:#3b82f6;color:white;" onclick="window.viewEditJobApp('${app.id}')">View/Edit</button>
+                    <button class="btn success btn-sm" onclick="window.approveJobApp('${app.id}')">Approve</button>
+                    <button class="btn danger btn-sm" onclick="window.rejectJobApp('${app.id}')">Reject</button>
+                </td>
+            `;
+            return tr;
+        };
+        
+        if(newApps.length === 0) {
             appsTbody.innerHTML = '<tr><td colspan="6" class="text-center text-secondary text-sm">No new applications.</td></tr>';
         } else {
-            pendingApps.forEach(app => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><img src="${app.photo_url || window.DEFAULT_AVATAR}" class="table-img"></td>
-                    <td><strong>${app.name}</strong><br><span class="text-xs text-secondary">${app.email}</span></td>
-                    <td><span class="category-tag">${app.category}</span></td>
-                    <td>₹${app.price}</td>
-                    <td>${new Date(app.timestamp).toLocaleDateString()}</td>
-                    <td style="display: flex; gap: 5px;">
-                        <button class="btn btn-sm" style="background:#3b82f6;color:white;" onclick="window.viewEditJobApp('${app.id}')">View/Edit</button>
-                        <button class="btn success btn-sm" onclick="window.approveJobApp('${app.id}')">Approve</button>
-                        <button class="btn danger btn-sm" onclick="window.rejectJobApp('${app.id}')">Reject</button>
-                    </td>
-                `;
-                appsTbody.appendChild(tr);
-            });
+            newApps.forEach(app => appsTbody.appendChild(renderAppRow(app)));
+        }
+
+        if(updateApps.length === 0) {
+            updatesTbody.innerHTML = '<tr><td colspan="6" class="text-center text-secondary text-sm">No profile update requests.</td></tr>';
+        } else {
+            updateApps.forEach(app => updatesTbody.appendChild(renderAppRow(app)));
         }
     }
 
@@ -2309,14 +2688,18 @@ if (document.getElementById('adminIdCheckerBtn')) {
 
 // Job Application Actions
 window.approveJobApp = async (appId) => {
-    if(!confirm("Approve this application and add them as an editor?")) return;
     const app = allApplications.find(a => a.id === appId);
     if(!app) return;
     
-    // Create new editor entry
+    // Check if this is an update request
+    const existingEditor = editors.find(e => e.userId === app.userId);
+    const isUpdate = !!existingEditor;
+    
+    const confirmMsg = isUpdate ? "Approve this profile update?" : "Approve this application and add them as an editor?";
+    if(!confirm(confirmMsg)) return;
+
     try {
-        const editorRef = push(ref(db, "editors"));
-        const newEditorData = {
+        const editorData = {
             userId: app.userId || '',
             name: app.name,
             email: app.email,
@@ -2324,37 +2707,50 @@ window.approveJobApp = async (appId) => {
             category: app.category,
             style: app.style || '',
             price: app.price,
+            maxPrice: app.maxPrice || null,
             experience: app.experience,
             skills: app.skills,
             tools: app.tools || '',
             bio: app.bio,
-            videoClips: app.videoLinks || [],
+            video_clips: (app.videoLinks && Array.isArray(app.videoLinks)) ? app.videoLinks.join(', ') : (app.videoLinks || ''),
             photo_url: app.photo_url,
             banner_url: app.banner_url,
             portfolio: app.portfolio || '',
-            availability: 'Available',
-            projects: 0,
-            views: 0,
-            verificationType: 'blue',
-            isVerified: true,  // Automatically verify when approved via admin
-            isFeatured: false,
-            createdAt: Date.now()
+            isVerified: true
         };
-        await set(editorRef, newEditorData);
+
+        if (isUpdate) {
+            // Update existing live profile
+            await update(ref(db, "editors/" + existingEditor.id), editorData);
+            
+            // Update local state
+            Object.assign(existingEditor, editorData);
+        } else {
+            // Create new profile
+            const editorRef = push(ref(db, "editors"));
+            const newEditorData = {
+                ...editorData,
+                availability: 'Available',
+                projects: 0,
+                views: 0,
+                verificationType: 'blue',
+                isFeatured: false,
+                createdAt: Date.now()
+            };
+            await set(editorRef, newEditorData);
+            editors.push({id: editorRef.key, ...newEditorData});
+        }
+
         // Mark application as approved
         await set(ref(db, "editor_applications/" + appId + "/status"), 'approved');
         
         // Locally update to re-render without reloading
-        const updatedApp = allApplications.find(a => a.id === appId);
-        if(updatedApp) updatedApp.status = 'approved';
-        
-        // Optionally add to local editors array to reflect immediately
-        editors.push({id: editorRef.key, ...newEditorData});
+        if(app) app.status = 'approved';
         
         renderAdminList();
         renderTrending();
         refreshCurrentFeeds();
-        alert('Editor approved and added to platform!');
+        alert(isUpdate ? 'Profile update approved!' : 'Editor approved and added to platform!');
     } catch(e) {
         console.error(e);
         alert('Failed to approve application.');
@@ -2813,12 +3209,45 @@ if(jobBannerUpload) {
     });
 }
 
+function playSuccessSound() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(440, ctx.currentTime);
+    osc.frequency.setValueAtTime(554.37, ctx.currentTime + 0.1); 
+    osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.2); 
+    
+    gainNode.gain.setValueAtTime(0, ctx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.05);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+}
+
 if(submitJobReqBtn) {
     submitJobReqBtn.addEventListener('click', async () => {
         if(!currentUser) return;
+        
+        // Final step validation
+        window.goToWizardStep(5, 4); // Attempt to proceed from 4 to trigger validation
+        const avatarUrl = document.getElementById('jobAvatarUrl').value;
+        const bannerUrl = document.getElementById('jobBannerUrl').value;
+        if (!avatarUrl || !bannerUrl) return; // Blocked by validation
+        
         const name = document.getElementById('jobName').value;
         const email = document.getElementById('jobEmail').value;
-        const phone = document.getElementById('jobPhone').value;
+        const countryCode = document.getElementById('countryCode') ? document.getElementById('countryCode').value : '';
+        const phoneInput = document.getElementById('jobPhone').value;
+        const phone = countryCode ? `${countryCode} ${phoneInput}` : phoneInput;
+        
         const category = document.getElementById('jobCategory').value;
         const style = document.getElementById('jobStyle') ? document.getElementById('jobStyle').value : '';
         const price = document.getElementById('jobPrice').value;
@@ -2828,19 +3257,7 @@ if(submitJobReqBtn) {
         const tools = document.getElementById('jobTools').value;
         const bio = document.getElementById('jobBio').value;
         const videoClipsStr = document.getElementById('jobVideoClips').value;
-        const avatarUrl = document.getElementById('jobAvatarUrl').value;
-        const bannerUrl = document.getElementById('jobBannerUrl').value;
         const portfolio = document.getElementById('jobPortfolio').value;
-
-        if(!name || !email || !phone || !price || !experience || !skills || !bio) {
-            alert('Please fill out all required fields.');
-            return;
-        }
-
-        if(!avatarUrl || !bannerUrl) {
-            alert('Please upload both a profile avatar and a banner.');
-            return;
-        }
 
         const videoLinks = videoClipsStr.split(',').map(s => s.trim()).filter(s => s);
 
@@ -2882,9 +3299,22 @@ if(submitJobReqBtn) {
                 const idx = allApplications.findIndex(a => a.id === updateId);
                 if(idx !== -1) allApplications[idx] = { ...allApplications[idx], ...updatePayload };
                 
-                alert('Application updated successfully! Resubmitted for review.');
+                // Show Success Overlay
+                const successOverlay = document.getElementById('successProfileModal');
+                if (successOverlay) {
+                    successOverlay.querySelector('h2').textContent = 'Profile Updated!';
+                    successOverlay.style.display = 'flex';
+                    playSuccessSound();
+                    
+                    await new Promise(r => setTimeout(r, 2000));
+                    successOverlay.style.display = 'none';
+                    
+                    populateJobFormFromProfile();
+                } else {
+                    alert('Application updated successfully! Resubmitted for review.');
+                }
+                
                 delete submitJobReqBtn.dataset.updateId;
-                submitJobReqBtn.textContent = 'Submit Application';
             } else {
                 const reqRef = push(ref(db, "editor_applications"));
                 const newPayload = {
@@ -2894,7 +3324,23 @@ if(submitJobReqBtn) {
                 };
                 await set(reqRef, newPayload);
                 allApplications.push({ id: reqRef.key, ...newPayload });
-                alert('Application submitted successfully! Our team will review your profile.');
+                
+                // Show Success Overlay
+                const successOverlay = document.getElementById('successProfileModal');
+                if (successOverlay) {
+                    successOverlay.querySelector('h2').textContent = 'Profile Created!';
+                    successOverlay.style.display = 'flex';
+                    playSuccessSound();
+                    
+                    // Wait 2.5 seconds, then hide and show profile
+                    await new Promise(r => setTimeout(r, 2500));
+                    successOverlay.style.display = 'none';
+                    
+                    populateJobFormFromProfile();
+                    window.scrollTo({top: 0, behavior: 'smooth'});
+                } else {
+                    alert('Application submitted successfully! Our team will review your profile.');
+                }
             }
             
             submitJobReqBtn.disabled = false;
@@ -2911,8 +3357,8 @@ if(submitJobReqBtn) {
                 bannerPrev.style.display = 'none';
             }
 
-            // Return to home view
-            window.switchNavView('home');
+            // We do NOT return to home view here because we want to see the application status!
+            // window.switchNavView('home');
         } catch(err) {
             console.error(err);
             alert('Error submitting application.');
@@ -2943,6 +3389,7 @@ if (contactInApp) {
         if (!currentProfileId) return;
         document.getElementById('contactModal').style.display = 'none';
         editorClientChatModal.style.display = 'flex';
+        window.isInterceptingChat = false;
         
         currentEccPath = `editor_client_chats/${currentProfileId}_${currentUser.uid}/messages`;
         
@@ -2962,8 +3409,8 @@ if (contactInApp) {
 if (closeEccChat) {
     closeEccChat.addEventListener('click', () => {
         editorClientChatModal.style.display = 'none';
+        window.isInterceptingChat = false;
         if (eccListener) {
-            // Can't directly unsubscribe with onValue in this exact syntax easily without keeping the ref exactly, but onValue returns the unsubscribe function in newer SDKs! Wait, we use 10.9.0 which returns the unsubscribe function.
             eccListener();
             eccListener = null;
         }
@@ -2977,11 +3424,15 @@ if (sendEccMsgBtn && eccChatInput) {
         eccChatInput.value = '';
         
         try {
-            await push(ref(db, currentEccPath), {
-                senderId: currentUser.uid,
+            const payload = {
+                senderId: window.isInterceptingChat ? 'admin' : currentUser.uid,
                 text: text,
                 timestamp: Date.now()
-            });
+            };
+            if (window.isInterceptingChat) {
+                payload.isAdmin = true;
+            }
+            await push(ref(db, currentEccPath), payload);
         } catch (e) {
             console.error("Chat error", e);
         }
@@ -3002,14 +3453,24 @@ function renderEccChat(messages) {
     }
     
     messages.forEach(msg => {
-        const isMe = msg.senderId === currentUser.uid;
+        const isAdminMsg = msg.isAdmin || msg.senderId === 'admin';
+        const isMe = window.isInterceptingChat ? isAdminMsg : (msg.senderId === currentUser?.uid);
+        
         const div = document.createElement('div');
-        div.style.maxWidth = '80%';
+        div.style.maxWidth = '85%';
         div.style.padding = '10px 15px';
         div.style.borderRadius = '12px';
         div.style.marginBottom = '5px';
         div.style.wordBreak = 'break-word';
-        if (isMe) {
+        div.style.position = 'relative';
+        
+        if (isAdminMsg) {
+            div.style.background = 'linear-gradient(135deg, #d4af37, #f3e5ab)';
+            div.style.color = '#000';
+            div.style.alignSelf = isMe ? 'flex-end' : 'flex-start';
+            div.style.border = '1px solid #ffdf00';
+            div.style.boxShadow = '0 0 10px rgba(212, 175, 55, 0.4)';
+        } else if (isMe) {
             div.style.alignSelf = 'flex-end';
             div.style.background = 'var(--primary)';
             div.style.color = 'white';
@@ -3020,8 +3481,10 @@ function renderEccChat(messages) {
         }
         
         div.innerHTML = `
-            <div style="font-size:0.95rem;">${msg.text}</div>
-            <div style="font-size:0.7rem; color:rgba(255,255,255,0.6); margin-top:5px; text-align: ${isMe ? 'right' : 'left'}">
+            ${isAdminMsg && !isMe ? '<div style="font-size: 0.7rem; font-weight: bold; margin-bottom: 4px; color: #b8860b;">🛡️ Support Admin (Verified)</div>' : ''}
+            ${isAdminMsg && isMe ? '<div style="font-size: 0.7rem; font-weight: bold; margin-bottom: 4px; color: #b8860b;">🛡️ Sent as Admin</div>' : ''}
+            <div style="font-size:0.95rem; font-weight: ${isAdminMsg ? '500' : 'normal'};">${msg.text}</div>
+            <div style="font-size:0.7rem; color: ${isAdminMsg ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)'}; margin-top:5px; text-align: ${isMe ? 'right' : 'left'}">
                 ${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
             </div>
         `;
@@ -3038,8 +3501,7 @@ const jobDashboardClientsList = document.getElementById('jobDashboardClientsList
 
 if (openJobProfileBtn) {
     openJobProfileBtn.addEventListener('click', () => {
-        document.getElementById('userProfileModal').style.display = 'none';
-        jobDashboardModal.style.display = 'flex';
+        openModal(jobDashboardModal);
         renderJobDashboard();
     });
 }
@@ -3090,6 +3552,7 @@ function renderJobDashboard() {
         div.querySelector('.msg-client-btn').addEventListener('click', () => {
             jobDashboardModal.style.display = 'none';
             editorClientChatModal.style.display = 'flex';
+            window.isInterceptingChat = false;
             
             currentEccPath = `editor_client_chats/${myEditorProfile.id}_${clientId}/messages`;
             document.getElementById('eccUserName').textContent = 'Chat with ' + name;
@@ -3307,6 +3770,85 @@ function setupAdminSupportListener() {
     }
 }
 
+let globalAdminInterceptListener = null;
+let allInterceptedChats = {};
+
+function setupAdminInterceptListener() {
+    if (!globalAdminInterceptListener) {
+        globalAdminInterceptListener = onValue(ref(db, 'editor_client_chats'), (snap) => {
+            allInterceptedChats = snap.val() || {};
+            renderAdminInterceptedChats();
+        });
+    }
+}
+
+window.openInterceptChat = (chatId) => {
+    const modal = document.getElementById('editorClientChatModal');
+    if(modal) modal.style.display = 'flex';
+    
+    currentEccPath = `editor_client_chats/${chatId}/messages`;
+    document.getElementById('eccUserName').textContent = 'Intercepted Chat View';
+    
+    // We also set the ID to send from Admin side so it stands out
+    window.isInterceptingChat = true;
+    
+    if (eccListener) eccListener();
+    eccListener = onValue(ref(db, currentEccPath), (snap) => {
+        const data = snap.val() || {};
+        const messages = Object.keys(data).map(k => ({id: k, ...data[k]})).sort((a,b) => a.timestamp - b.timestamp);
+        renderEccChat(messages);
+    });
+};
+
+function renderAdminInterceptedChats() {
+    const list = document.getElementById('adminSupportChatsList');
+    if(!list) return;
+    list.innerHTML = '';
+    
+    const chatKeys = Object.keys(allInterceptedChats);
+    if(chatKeys.length === 0) {
+        list.innerHTML = '<tr><td colspan="4" class="text-center text-secondary text-sm">No intercepted chats found.</td></tr>';
+        return;
+    }
+    
+    const sortedChats = chatKeys.map(key => {
+        const msgs = Object.values(allInterceptedChats[key].messages || {});
+        const lastMsg = msgs.sort((a,b) => b.timestamp - a.timestamp)[0];
+        return {
+            id: key,
+            lastUpdated: lastMsg ? lastMsg.timestamp : 0,
+            lastMsg: lastMsg,
+            msgsCount: msgs.length
+        };
+    }).sort((a,b) => b.lastUpdated - a.lastUpdated);
+    
+    if(sortedChats.length === 0) {
+        list.innerHTML = '<tr><td colspan="4" class="text-center text-secondary text-sm">No intercepted chats found.</td></tr>';
+        return;
+    }
+    
+    sortedChats.forEach(chat => {
+        if(chat.msgsCount === 0) return;
+        const parts = chat.id.split('_');
+        const editorId = parts[0];
+        const clientId = parts[1];
+        
+        const ed = editors.find(e => e.id === editorId);
+        const cliName = allUsers[clientId] ? allUsers[clientId].email : clientId;
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><span class="text-sm">${cliName}</span></td>
+            <td><strong>${ed ? ed.name : 'Unknown Editor'}</strong></td>
+            <td><span class="text-xs text-secondary">${new Date(chat.lastUpdated).toLocaleString()}</span></td>
+            <td>
+                <button class="btn secondary btn-sm" onclick="window.openInterceptChat('${chat.id}')">View Chat / Reply</button>
+            </td>
+        `;
+        list.appendChild(tr);
+    });
+}
+
 function renderAdminSupportUsersList() {
     if (!adminSupportUserList) return;
     adminSupportUserList.innerHTML = '';
@@ -3438,7 +3980,7 @@ if (sendAdminSupportMsgBtn && adminSupportChatInput) {
     });
 }
 
-// Auto-shuffle All Editors every 60 seconds
+// Auto-shuffle All Editors every 5 minutes
 setInterval(() => {
     const isShowingResults = document.getElementById('searchResultsView') && document.getElementById('searchResultsView').style.display === 'block';
     const homeView = document.getElementById('homeView');
@@ -3462,7 +4004,7 @@ setInterval(() => {
             }, 300);
         }
     }
-}, 60000);
+}, 300000);
 
 // Super Admin Logic
 const SUPER_ADMIN_PW = "Escanor @6289947781";
@@ -3885,34 +4427,58 @@ window.aiDirectApproveJobApp = async (appId) => {
     const app = allApplications.find(a => a.id === appId);
     if(!app) return;
     
-    // Create new editor entry
-    const editorRef = push(ref(db, "editors"));
-    const newEditorData = {
+    // Check if this is an update request
+    const existingEditor = editors.find(e => e.userId === app.userId);
+    const isUpdate = !!existingEditor;
+    
+    const editorData = {
         userId: app.userId || '',
         name: app.name || '',
         email: app.email || '',
         phone: app.phone || '',
-        portfolioUrl: app.portfolioUrl || '',
-        bio: app.bio || '',
-        tags: app.tags || '',
         category: app.category || '',
+        style: app.style || '',
         price: app.price || 0,
         maxPrice: app.maxPrice || null,
-        currency: app.currency || 'INR',
+        experience: app.experience || '',
+        skills: app.tags || app.skills || '', // Using the AI generated tags here
+        tools: app.tools || '',
+        bio: app.bio || '', // This is the AI enhanced bio
+        video_clips: (app.videoLinks && Array.isArray(app.videoLinks)) ? app.videoLinks.join(', ') : (app.videoLinks || ''),
         photo_url: app.photo_url || '',
-        status: 'active',
-        isFeatured: false,
-        joinedAt: Date.now(),
-        ordersCompleted: 0,
-        rating: 0
+        banner_url: app.banner_url || '',
+        portfolio: app.portfolio || '',
+        isVerified: true
     };
-    await set(editorRef, newEditorData);
-    
+
+    if (isUpdate) {
+        // Update existing live profile
+        await update(ref(db, "editors/" + existingEditor.id), editorData);
+        // Update local state
+        Object.assign(existingEditor, editorData);
+    } else {
+        // Create new profile
+        const editorRef = push(ref(db, "editors"));
+        const newEditorData = {
+            ...editorData,
+            availability: 'Available',
+            projects: 0,
+            views: 0,
+            verificationType: 'blue',
+            isFeatured: false,
+            createdAt: Date.now()
+        };
+        await set(editorRef, newEditorData);
+        editors.push({id: editorRef.key, ...newEditorData});
+    }
+
     // Set application status to approved
     await update(ref(db, "editor_applications/" + appId), { status: 'approved' });
     app.status = 'approved';
     
     renderAdminList();
+    renderTrending();
+    refreshCurrentFeeds();
 };
 
 // ============================================
