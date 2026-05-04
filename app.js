@@ -248,106 +248,129 @@ window.addEventListener('DOMContentLoaded', () => {
     fetchEditors();
 });
 
+let isInitialAuthCheck = true;
+const appStartTime = Date.now();
+const MINIMUM_SPLASH_TIME = 3500;
+
 // Authentication AuthState
 onAuthStateChanged(auth, async (user) => {
     const authScreen = document.getElementById('authScreen');
     const mainApp = document.getElementById('mainApp');
     const welcomeScreen = document.getElementById('welcomeScreen');
     const adminPanelOverlay = document.getElementById('adminPanelOverlay');
-    
-    if (user) {
-        currentUser = user;
-        
-        window.currentUserIsAdmin = false;
-        try {
-            const userEmail = (user.email || '').toLowerCase();
-            if (userEmail === 'dwiphalder49@gmail.com' || userEmail === 'dwiphalder608@gmail.com') {
-                window.currentUserIsAdmin = true;
-            }
-            const adminSnap = await get(ref(db, "admins"));
-            if (adminSnap.exists()) {
-                const admins = adminSnap.val();
-                const matchedAdmin = Object.values(admins).find(a => 
-                    ((a.email || '').toLowerCase() === userEmail || a.uid === user.uid)
-                );
-                
-                if (matchedAdmin) {
-                    if (!matchedAdmin.isDisabled) {
-                        window.currentUserIsAdmin = true;
-                    } else {
-                        window.currentUserIsAdmin = false;
-                        // If hardcoded matched but is disabled in db, it gets disabled.
-                    }
-                }
-            }
-        } catch(e) {
-            console.error("Failed to check admin status", e);
-        }
+    const splashScreenOverlay = document.getElementById('splashScreenOverlay');
 
-        authScreen.style.opacity = '0';
-        authScreen.style.visibility = 'hidden';
-        
-        setTimeout(() => {
-            authScreen.style.display = 'none';
+    const processAuthState = async () => {
+        if (user) {
+            currentUser = user;
             
-            if (window.currentUserIsAdmin) {
-                // Admin bypass
-                mainApp.style.display = 'none';
-                welcomeScreen.style.display = 'none';
-                adminPanelOverlay.style.display = 'block';
-                renderAdminList();
-            } else {
-                // Welcome screen
-                adminPanelOverlay.style.display = 'none';
-                const welcomeUserName = document.getElementById('welcomeUserName');
-                if (welcomeUserName) welcomeUserName.textContent = user.displayName || user.email.split('@')[0];
-                welcomeScreen.style.display = 'flex';
-                welcomeScreen.style.opacity = '1';
-                
-                setTimeout(() => {
-                    welcomeScreen.style.opacity = '0';
-                    setTimeout(() => {
-                        welcomeScreen.style.display = 'none';
-                        mainApp.style.display = 'block';
-                        fetchEditors(); // Refresh
-                    }, 800);
-                }, 2500); // show welcome for 2.5s
-            }
-        }, 500); // fade out auth screen wait
-        
-        loginBtn.style.display = 'none';
-        userProfile.style.display = 'flex';
-        const supportBtn = document.getElementById('supportBtn');
-        if(supportBtn) supportBtn.style.display = 'block';
-        if(typeof listenToUserSupportChats === 'function') listenToUserSupportChats();
-        let profilePic = user.photoURL;
-        if(allUsers[user.uid] && allUsers[user.uid].photoUrl) {
-            profilePic = allUsers[user.uid].photoUrl;
-        } else {
-            get(ref(db, "users/" + user.uid)).then(sp => {
-                if(sp.exists()) {
-                    allUsers[user.uid] = sp.val();
-                    if(sp.val().photoUrl) {
-                        userAvatar.src = sp.val().photoUrl;
+            window.currentUserIsAdmin = false;
+            try {
+                const userEmail = (user.email || '').toLowerCase();
+                if (userEmail === 'dwiphalder49@gmail.com' || userEmail === 'dwiphalder608@gmail.com') {
+                    window.currentUserIsAdmin = true;
+                }
+                const adminSnap = await get(ref(db, "admins"));
+                if (adminSnap.exists()) {
+                    const admins = adminSnap.val();
+                    const matchedAdmin = Object.values(admins).find(a => 
+                        ((a.email || '').toLowerCase() === userEmail || a.uid === user.uid)
+                    );
+                    
+                    if (matchedAdmin) {
+                        if (!matchedAdmin.isDisabled) {
+                            window.currentUserIsAdmin = true;
+                        } else {
+                            window.currentUserIsAdmin = false;
+                            // If hardcoded matched but is disabled in db, it gets disabled.
+                        }
                     }
                 }
-            });
+            } catch(e) {
+                console.error("Failed to check admin status", e);
+            }
+
+            authScreen.style.opacity = '0';
+            authScreen.style.visibility = 'hidden';
+            
+            setTimeout(() => {
+                authScreen.style.display = 'none';
+                
+                if (window.currentUserIsAdmin) {
+                    // Admin bypass
+                    mainApp.style.display = 'none';
+                    welcomeScreen.style.display = 'none';
+                    adminPanelOverlay.style.display = 'block';
+                    renderAdminList();
+                } else {
+                    // Welcome screen
+                    adminPanelOverlay.style.display = 'none';
+                    const welcomeUserName = document.getElementById('welcomeUserName');
+                    if (welcomeUserName) welcomeUserName.textContent = user.displayName || user.email.split('@')[0];
+                    welcomeScreen.style.display = 'flex';
+                    welcomeScreen.style.opacity = '1';
+                    
+                    setTimeout(() => {
+                        welcomeScreen.style.opacity = '0';
+                        setTimeout(() => {
+                            welcomeScreen.style.display = 'none';
+                            mainApp.style.display = 'block';
+                            fetchEditors(); // Refresh
+                        }, 800);
+                    }, 2500); // show welcome for 2.5s
+                }
+            }, 500); // fade out auth screen wait
+            
+            loginBtn.style.display = 'none';
+            userProfile.style.display = 'flex';
+            const supportBtn = document.getElementById('supportBtn');
+            if(supportBtn) supportBtn.style.display = 'block';
+            if(typeof listenToUserSupportChats === 'function') listenToUserSupportChats();
+            let profilePic = user.photoURL;
+            if(allUsers[user.uid] && allUsers[user.uid].photoUrl) {
+                profilePic = allUsers[user.uid].photoUrl;
+            } else {
+                get(ref(db, "users/" + user.uid)).then(sp => {
+                    if(sp.exists()) {
+                        allUsers[user.uid] = sp.val();
+                        if(sp.val().photoUrl) {
+                            userAvatar.src = sp.val().photoUrl;
+                        }
+                    }
+                });
+            }
+            userAvatar.src = profilePic || window.DEFAULT_AVATAR;
+        } else {
+            currentUser = null;
+            authScreen.style.display = 'flex';
+            authScreen.style.opacity = '1';
+            authScreen.style.visibility = 'visible';
+            
+            mainApp.style.display = 'none';
+            if(welcomeScreen) welcomeScreen.style.display = 'none';
+            if(adminPanelOverlay) adminPanelOverlay.style.display = 'none';
+            
+            loginBtn.style.display = 'block';
+            userProfile.style.display = 'none';
+            const supportBtn = document.getElementById('supportBtn');
+            if(supportBtn) supportBtn.style.display = 'none';
         }
-        userAvatar.src = profilePic || window.DEFAULT_AVATAR;
+    };
+    
+    if (isInitialAuthCheck) {
+        isInitialAuthCheck = false;
+        const elapsedTime = Date.now() - appStartTime;
+        const remainingTime = Math.max(0, MINIMUM_SPLASH_TIME - elapsedTime);
+        
+        setTimeout(async () => {
+            await processAuthState();
+            if (splashScreenOverlay) {
+                splashScreenOverlay.style.opacity = '0';
+                setTimeout(() => splashScreenOverlay.style.display = 'none', 800);
+            }
+        }, remainingTime);
     } else {
-        currentUser = null;
-        authScreen.style.display = 'flex';
-        authScreen.style.opacity = '1';
-        authScreen.style.visibility = 'visible';
-        
-        mainApp.style.display = 'none';
-        if(welcomeScreen) welcomeScreen.style.display = 'none';
-        if(adminPanelOverlay) adminPanelOverlay.style.display = 'none';
-        
-        loginBtn.style.display = 'block';
-        userProfile.style.display = 'none';
-        const supportBtn = document.getElementById('supportBtn');
-        if(supportBtn) supportBtn.style.display = 'none';
+        processAuthState();
     }
 });
 
@@ -631,7 +654,34 @@ if(bottomNavProfile) {
         window.openUserProfileView();
     });
 }
-function animateViewSwitch(newViewEl, oldViewElements, callback) {
+
+const bottomNavMessages = document.getElementById('bottomNavMessages');
+if(bottomNavMessages) {
+    bottomNavMessages.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!currentUser) {
+            document.getElementById('loginPromptModal').style.display = 'flex';
+            return;
+        }
+        window.switchNavView('messages');
+    });
+}
+function updateNavIndicator(view) {
+    const navItems = {
+        'messages': 0,
+        'jobs': 1,
+        'home': 2,
+        'wishlist': 3,
+        'profile': 4
+    };
+    const idx = navItems[view];
+    const navIndicator = document.getElementById('navIndicator');
+    if (navIndicator && idx !== undefined) {
+        navIndicator.style.transform = `translateX(${idx * 100}%)`;
+    }
+}
+
+function animateViewSwitch(newViewEl, oldViewElements, callback, direction = null) {
     if (!userSettings.animations || userSettings.lowEnd) {
         oldViewElements.forEach(el => { if(el) el.style.display = 'none'; });
         if(newViewEl) newViewEl.style.display = 'block';
@@ -641,11 +691,22 @@ function animateViewSwitch(newViewEl, oldViewElements, callback) {
 
     let delay = 0;
     let anyVisible = false;
+    
+    let outAnim = 'fadeOutUp 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards';
+    let inAnim = 'fadeInUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
+
+    if (direction === 'Next') {
+        outAnim = 'slideLeftOut 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards';
+        inAnim = 'slideLeftIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
+    } else if (direction === 'Prev') {
+        outAnim = 'slideRightOut 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards';
+        inAnim = 'slideRightIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
+    }
 
     oldViewElements.forEach(el => {
         if(el && el.style.display !== 'none') {
             anyVisible = true;
-            el.style.animation = 'fadeOutUp 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards';
+            el.style.animation = outAnim;
             setTimeout(() => {
                 el.style.display = 'none';
                 el.style.animation = '';
@@ -658,7 +719,7 @@ function animateViewSwitch(newViewEl, oldViewElements, callback) {
     if(newViewEl) {
         setTimeout(() => {
             newViewEl.style.display = 'block';
-            newViewEl.style.animation = 'fadeInUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
+            newViewEl.style.animation = inAnim;
             if(callback) callback();
         }, delay);
     } else {
@@ -724,40 +785,109 @@ window.goToWizardStep = function(targetStep, currentStep = null) {
 window.switchNavView = function(view) {
     const searchResultsView = document.getElementById('searchResultsView');
     const profileView = document.getElementById('profileView');
+    const messagesView = document.getElementById('messagesView');
+    const bottomNavMessages = document.getElementById('bottomNavMessages');
     
+    // Determine scroll direction
+    const prevView = window.currentNavView || 'home';
+    const oldIdx = navOrder.indexOf(prevView);
+    const newIdx = navOrder.indexOf(view);
+    
+    let direction = null;
+    if (oldIdx !== -1 && newIdx !== -1) {
+        if (newIdx > oldIdx) direction = 'Next';
+        if (newIdx < oldIdx) direction = 'Prev';
+    }
+    
+    // Clear all nav active states
+    [bottomNavHome, bottomNavJobs, bottomNavWishlist, bottomNavProfile, bottomNavMessages].forEach(el => {
+        if(el) el.classList.remove('active');
+    });
+
+    // Update the visual selection indicator
+    updateNavIndicator(view);
+
     if(view === 'home') {
-        animateViewSwitch(homeView, [jobsView, wishlistView, searchResultsView, profileView]);
+        animateViewSwitch(homeView, [jobsView, wishlistView, searchResultsView, profileView, messagesView], null, direction);
         if(bottomNavHome) bottomNavHome.classList.add('active');
-        if(bottomNavJobs) bottomNavJobs.classList.remove('active');
-        if(bottomNavWishlist) bottomNavWishlist.classList.remove('active');
-        if(bottomNavProfile) bottomNavProfile.classList.remove('active');
     } else if(view === 'jobs') {
-        animateViewSwitch(jobsView, [homeView, wishlistView, searchResultsView, profileView], populateJobFormFromProfile);
+        animateViewSwitch(jobsView, [homeView, wishlistView, searchResultsView, profileView, messagesView], populateJobFormFromProfile, direction);
         if(bottomNavJobs) bottomNavJobs.classList.add('active');
-        if(bottomNavHome) bottomNavHome.classList.remove('active');
-        if(bottomNavWishlist) bottomNavWishlist.classList.remove('active');
-        if(bottomNavProfile) bottomNavProfile.classList.remove('active');
     } else if(view === 'wishlist') {
-        animateViewSwitch(wishlistView, [homeView, jobsView, searchResultsView, profileView], renderWishlist);
+        animateViewSwitch(wishlistView, [homeView, jobsView, searchResultsView, profileView, messagesView], renderWishlist, direction);
         if(bottomNavWishlist) bottomNavWishlist.classList.add('active');
-        if(bottomNavHome) bottomNavHome.classList.remove('active');
-        if(bottomNavJobs) bottomNavJobs.classList.remove('active');
-        if(bottomNavProfile) bottomNavProfile.classList.remove('active');
     } else if(view === 'searchResults') {
-        animateViewSwitch(searchResultsView, [homeView, jobsView, wishlistView, profileView]);
-        if(bottomNavWishlist) bottomNavWishlist.classList.remove('active');
-        if(bottomNavHome) bottomNavHome.classList.remove('active');
-        if(bottomNavJobs) bottomNavJobs.classList.remove('active');
-        if(bottomNavProfile) bottomNavProfile.classList.remove('active');
+        animateViewSwitch(searchResultsView, [homeView, jobsView, wishlistView, profileView, messagesView], null, direction);
     } else if(view === 'profile') {
-        animateViewSwitch(profileView, [homeView, jobsView, wishlistView, searchResultsView], populateUserProfileData);
+        animateViewSwitch(profileView, [homeView, jobsView, wishlistView, searchResultsView, messagesView], populateUserProfileData, direction);
         if(bottomNavProfile) bottomNavProfile.classList.add('active');
-        if(bottomNavHome) bottomNavHome.classList.remove('active');
-        if(bottomNavJobs) bottomNavJobs.classList.remove('active');
-        if(bottomNavWishlist) bottomNavWishlist.classList.remove('active');
+    } else if(view === 'messages') {
+        animateViewSwitch(messagesView, [homeView, jobsView, wishlistView, searchResultsView, profileView], null, direction);
+        if(bottomNavMessages) bottomNavMessages.classList.add('active');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.currentNavView = view;
 };
+
+// Swipe Gestures for Navigation
+const navOrder = ['messages', 'jobs', 'home', 'wishlist', 'profile'];
+let touchstartX = 0;
+let touchendX = 0;
+let touchstartY = 0;
+let touchendY = 0;
+
+function handleGesture(e) {
+    if (e && e.target && e.target.closest('.horizontal-scroll-container, .filters-scroll, .chat-container, .messages-list')) {
+        return;
+    }
+
+    const xDiff = Math.abs(touchendX - touchstartX);
+    const yDiff = Math.abs(touchendY - touchstartY);
+    // Be sure it is a horizontal swipe, not vertical scrolling
+    if (xDiff < 60 || yDiff > 50) return; 
+
+    // If currentUser is not defined, we can't switch to some protected routes like wishlist, jobs, messages, profile.
+    // For simplicity, let's only allow swipe if we are already in one of these tabs.
+    const curIdx = navOrder.indexOf(window.currentNavView || 'home');
+    if (curIdx === -1) return; // i.e. on searchResults
+    
+    if (touchendX < touchstartX) { // Swiped left -> Next
+        if (curIdx < navOrder.length - 1) {
+            const nextView = navOrder[curIdx + 1];
+            if ((nextView === 'messages' || nextView === 'profile' || nextView === 'jobs' || nextView === 'wishlist') && !currentUser) {
+                // Must be logged in to go here
+                document.getElementById('loginPromptModal').style.display = 'flex';
+                return;
+            }
+            window.switchNavView(nextView);
+        }
+    }
+    
+    if (touchendX > touchstartX) { // Swiped right -> Previous
+        if (curIdx > 0) {
+            const prevView = navOrder[curIdx - 1];
+            if ((prevView === 'messages' || prevView === 'profile' || prevView === 'jobs' || prevView === 'wishlist') && !currentUser) {
+                document.getElementById('loginPromptModal').style.display = 'flex';
+                return;
+            }
+            window.switchNavView(prevView);
+        }
+    }
+}
+
+const mainApp = document.getElementById('mainApp');
+if (mainApp) {
+    mainApp.addEventListener('touchstart', e => {
+        touchstartX = e.changedTouches[0].screenX;
+        touchstartY = e.changedTouches[0].screenY;
+    }, {passive: true});
+
+    mainApp.addEventListener('touchend', e => {
+        touchendX = e.changedTouches[0].screenX;
+        touchendY = e.changedTouches[0].screenY;
+        handleGesture(e);
+    }, {passive: true});
+}
 
 if(bottomNavHome && bottomNavJobs && bottomNavWishlist) {
     bottomNavHome.addEventListener('click', (e) => {
@@ -1431,12 +1561,14 @@ function generateHorizontalCardHTML(editor) {
 
 // User Interactions
 if(document.getElementById('searchBtn')) document.getElementById('searchBtn').addEventListener('click', () => processSearch(false));
+if(document.getElementById('searchIconLeft')) document.getElementById('searchIconLeft').addEventListener('click', () => processSearch(false));
 if(searchInput) {
     searchInput.addEventListener('keypress', (e) => {
         if(e.key === 'Enter') processSearch(false);
     });
 }
 if(document.getElementById('searchBtnResults')) document.getElementById('searchBtnResults').addEventListener('click', () => processSearch(true));
+if(document.getElementById('searchIconLeftResults')) document.getElementById('searchIconLeftResults').addEventListener('click', () => processSearch(true));
 if(document.getElementById('searchInputResults')) {
     document.getElementById('searchInputResults').addEventListener('keypress', (e) => {
         if(e.key === 'Enter') processSearch(true);
@@ -1525,32 +1657,29 @@ document.addEventListener('click', (e) => {
     if (e.target.closest('.btn-message')) {
         e.stopPropagation();
         const card = e.target.closest('.editor-card, .editor-row-card');
-        if (card) {
-            currentProfileId = card.dataset.id;
+        let selectedProfileId = card ? card.dataset.id : null;
+        
+        // If clicking from profile modal, there is no card, but currentProfileId is set
+        if (!selectedProfileId && e.target.closest('#editorProfileModal')) {
+            selectedProfileId = currentProfileId;
+        }
+
+        if (selectedProfileId) {
+            currentProfileId = selectedProfileId;
             const ed = editors.find(editor => editor.id === currentProfileId);
             if (!currentUser) {
                 loginPromptModal.style.display = 'flex';
                 return;
             }
             if (ed) {
-                if (ed.email) {
-                    document.getElementById('contactEmail').href = `mailto:${ed.email}`;
-                    document.getElementById('contactEmail').style.display = 'inline-block';
-                } else {
-                    document.getElementById('contactEmail').href = '#';
-                    document.getElementById('contactEmail').style.display = 'none';
+                const chatId = `${ed.id}_${currentUser.uid}`;
+                window.switchNavView('messages');
+                // Close the profile modal if it's open
+                const profileModal = document.getElementById('editorProfileModal');
+                if (profileModal && profileModal.style.display !== 'none') {
+                    profileModal.style.display = 'none';
                 }
-                
-                const phoneNum = ed.whatsapp || ed.phone;
-                if(phoneNum) {
-                    const cleanNo = phoneNum.replace(/[^0-9]/g, '');
-                    document.getElementById('contactWhatsapp').href = `https://wa.me/${cleanNo}`;
-                    document.getElementById('contactWhatsapp').style.display = 'inline-block';
-                } else {
-                    document.getElementById('contactWhatsapp').href = '#';
-                    document.getElementById('contactWhatsapp').style.display = 'none';
-                }
-                contactModal.style.display = 'flex';
+                window.openClientSideChat(ed.id, chatId, ed.name);
             }
         }
         return;
@@ -1986,7 +2115,8 @@ function updateChatNotifications(data) {
         }
     };
     
-    updateBadge('bottomNavProfileBadge', totalUnread);
+    updateBadge('bottomNavProfileBadge', 0); // Clear any old profile badge if still around
+    updateBadge('bottomNavMessagesBadge', totalUnread);
     updateBadge('jobDashboardUnreadBadge', unreadClients);
 }
 
@@ -3607,7 +3737,18 @@ window.openClientSideChat = (editorId, chatId, editorName) => {
     editorClientChatModal.style.display = 'flex';
     window.isInterceptingChat = false;
     currentEccPath = `editor_client_chats/${chatId}/messages`;
-    document.getElementById('eccUserName').textContent = 'Chat with ' + editorName;
+    
+    const ed = editors.find(e => e.id === editorId);
+    const photoUrl = ed && ed.photo_url ? ed.photo_url : window.DEFAULT_AVATAR;
+    
+    document.getElementById('eccUserName').innerHTML = `
+        <div style="display:flex; align-items:center; gap: 8px;">
+            <img src="${photoUrl}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+            <div>
+                <div style="font-size: 1.1rem; font-weight: bold;">${editorName}</div>
+            </div>
+        </div>
+    `;
     
     if (eccListener) eccListener();
     eccListener = onValue(ref(db, currentEccPath), (snap) => {
