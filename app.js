@@ -249,8 +249,28 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 let isInitialAuthCheck = true;
+let initialDataFetched = false;
 const appStartTime = Date.now();
-const MINIMUM_SPLASH_TIME = 3500;
+const MINIMUM_SPLASH_TIME = 4000; // Increased to 4 seconds for minimum splash
+
+function tryDismissSplashScreen() {
+    if (!isInitialAuthCheck && initialDataFetched) {
+        const elapsedTime = Date.now() - appStartTime;
+        const remainingTime = Math.max(0, MINIMUM_SPLASH_TIME - elapsedTime);
+        setTimeout(() => {
+            const splashScreenOverlay = document.getElementById('splashScreenOverlay');
+            if (splashScreenOverlay) {
+                splashScreenOverlay.style.opacity = '0';
+                splashScreenOverlay.style.visibility = 'hidden';
+                document.getElementById('welcomeScreen')?.classList.add('app-entrance-anim');
+                document.getElementById('authScreen')?.classList.add('app-entrance-anim');
+                document.getElementById('mainApp')?.classList.add('app-entrance-anim');
+                document.getElementById('adminPanelOverlay')?.classList.add('app-entrance-anim');
+                setTimeout(() => splashScreenOverlay.style.display = 'none', 800);
+            }
+        }, remainingTime);
+    }
+}
 
 // Authentication AuthState
 onAuthStateChanged(auth, async (user) => {
@@ -359,16 +379,8 @@ onAuthStateChanged(auth, async (user) => {
     
     if (isInitialAuthCheck) {
         isInitialAuthCheck = false;
-        const elapsedTime = Date.now() - appStartTime;
-        const remainingTime = Math.max(0, MINIMUM_SPLASH_TIME - elapsedTime);
-        
-        setTimeout(async () => {
-            await processAuthState();
-            if (splashScreenOverlay) {
-                splashScreenOverlay.style.opacity = '0';
-                setTimeout(() => splashScreenOverlay.style.display = 'none', 800);
-            }
-        }, remainingTime);
+        await processAuthState();
+        tryDismissSplashScreen();
     } else {
         processAuthState();
     }
@@ -835,9 +847,10 @@ let touchstartX = 0;
 let touchendX = 0;
 let touchstartY = 0;
 let touchendY = 0;
+let touchTarget = null;
 
-function handleGesture(e) {
-    if (e && e.target && e.target.closest('.horizontal-scroll-container, .filters-scroll, .chat-container, .messages-list')) {
+function handleGesture() {
+    if (touchTarget && touchTarget.closest('.horizontal-scroll-container, .filters-scroll, .chat-container, .messages-list')) {
         return;
     }
 
@@ -880,12 +893,13 @@ if (mainApp) {
     mainApp.addEventListener('touchstart', e => {
         touchstartX = e.changedTouches[0].screenX;
         touchstartY = e.changedTouches[0].screenY;
+        touchTarget = e.target;
     }, {passive: true});
 
     mainApp.addEventListener('touchend', e => {
         touchendX = e.changedTouches[0].screenX;
         touchendY = e.changedTouches[0].screenY;
-        handleGesture(e);
+        handleGesture();
     }, {passive: true});
 }
 
@@ -1172,6 +1186,11 @@ async function fetchEditors() {
     } catch (error) {
         console.error("Fetch error:", error);
         if(loadingMain) loadingMain.innerHTML = '<p class="text-danger">Failed to load data. Check DB connection.</p>';
+    } finally {
+        if (!initialDataFetched) {
+            initialDataFetched = true;
+            tryDismissSplashScreen();
+        }
     }
 }
 
