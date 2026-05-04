@@ -125,9 +125,10 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
             <span>Jobs</span>
         </a>
-        <a href="#" class="nav-item" id="bottomNavProfile">
+        <a href="#" class="nav-item" id="bottomNavProfile" style="position: relative;">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             <span>Profile</span>
+            <span id="bottomNavProfileBadge" style="display:none; position:absolute; top:2px; right:20px; background:var(--warning); color:#000; border-radius:50%; width:18px; height:18px; font-size:10px; font-weight:bold; align-items:center; justify-content:center;">0</span>
         </a>
     </div>
 
@@ -501,11 +502,23 @@
                     Admin Panel
                 </button>
 
+                <div id="clientChatsSection" class="mt-4" style="text-align: left;">
+                    <hr style="margin:20px 0; border:1px solid var(--glass-border);">
+                    <h3>Message History</h3>
+                    <p class="text-secondary text-sm mb-3">Recent conversations with editors.</p>
+                    <div id="clientChatsList" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div class="glass-card p-3 text-center text-secondary text-sm">Loading chats...</div>
+                    </div>
+                </div>
+
                 <div id="jobProfileSection" style="display:none;" class="mt-4">
                     <hr style="margin:20px 0; border:1px solid var(--glass-border);">
                     <h3 style="text-align: left;">My Job Profile</h3>
                     <p class="text-secondary text-sm mb-3" style="text-align: left;">You are an approved editor! Manage your clients and messages.</p>
-                    <button class="btn primary w-100 mb-2" id="openJobProfileBtn">Open Job Dashboard</button>
+                    <button class="btn primary w-100 mb-2" id="openJobProfileBtn" style="position:relative;">
+                        Open Job Dashboard
+                        <span id="jobDashboardUnreadBadge" style="display:none; position:absolute; top:-5px; right:-5px; background:var(--warning); color:#000; border-radius:50%; width:20px; height:20px; font-size:12px; font-weight:bold; align-items:center; justify-content:center; box-shadow:0 2px 5px rgba(0,0,0,0.3);">0</span>
+                    </button>
                 </div>
             </section>
         </div>

@@ -1926,7 +1926,193 @@ window.openUserProfileView = function(showMustComplete = false) {
     }
     window.switchNavView('profile');
     window.populateUserProfileData(showMustComplete);
+    listenToClientChats();
 };
+
+let clientChatsListener = null;
+window.globalClientChatsData = {};
+
+function listenToClientChats() {
+    if (clientChatsListener || !currentUser) return;
+    clientChatsListener = onValue(ref(db, 'editor_client_chats'), (snap) => {
+        const data = snap.val() || {};
+        window.globalClientChatsData = data;
+        renderClientChatsList(data);
+        if (typeof renderJobDashboard === 'function') renderJobDashboard();
+        updateChatNotifications(data);
+    });
+}
+
+function updateChatNotifications(data) {
+    if (!currentUser) return;
+    let unreadClients = 0;
+    let unreadEditors = 0;
+    
+    const myEditorProfile = editors.find(e => e.userId === currentUser.uid);
+    
+    Object.keys(data).forEach(key => {
+        const parts = key.split('_');
+        if (parts.length !== 2) return;
+        const editorId = parts[0];
+        const clientId = parts[1];
+        
+        const msgsObj = data[key].messages || {};
+        const msgs = Object.values(msgsObj);
+        if (msgs.length === 0) return;
+        
+        const lastMsg = msgs.sort((a,b) => b.timestamp - a.timestamp)[0];
+        // If I am the client and the last message is from the editor (or admin)
+        if (clientId === currentUser.uid && lastMsg.senderId !== currentUser.uid) {
+            unreadEditors++;
+        }
+        
+        // If I am the editor and the last message is from the client (or admin)
+        if (myEditorProfile && editorId === myEditorProfile.id && lastMsg.senderId !== currentUser.uid) {
+            unreadClients++;
+        }
+    });
+    
+    const totalUnread = unreadClients + unreadEditors;
+    
+    const updateBadge = (id, count) => {
+        const badge = document.getElementById(id);
+        if (badge) {
+            if (count > 0) {
+                badge.style.display = 'flex';
+                badge.textContent = count;
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    };
+    
+    updateBadge('bottomNavProfileBadge', totalUnread);
+    updateBadge('jobDashboardUnreadBadge', unreadClients);
+}
+
+function renderClientChatsList(data) {
+    const list = document.getElementById('clientChatsList');
+    if (!list) return;
+    
+    if (!currentUser) return;
+    
+    // filter chats involving currentUser.uid (as client)
+    const myChats = [];
+    Object.keys(data).forEach(key => {
+        const parts = key.split('_');
+        if (parts.length === 2 && parts[1] === currentUser.uid) { // _clientId
+            const msgsObj = data[key].messages || {};
+            const msgs = Object.values(msgsObj);
+            if (msgs.length > 0) {
+                const lastMsg = msgs.sort((a,b) => b.timestamp - a.timestamp)[0];
+                myChats.push({
+                    chatId: key,
+                    editorId: parts[0],
+                    lastMsg: lastMsg,
+                    timestamp: lastMsg.timestamp
+                });
+            }
+        }
+    });
+    
+    if (myChats.length === 0) {
+        list.innerHTML = '<div class="glass-card p-4 text-center text-secondary">No conversations yet.</div>';
+        return;
+    }
+    
+    // Get favorites from user profile
+    const userProfile = allUsers[currentUser.uid] || {};
+    const favChats = userProfile.favoriteChats || [];
+    
+    myChats.sort((a, b) => {
+        const aFav = favChats.includes(a.chatId);
+        const bFav = favChats.includes(b.chatId);
+        if (aFav && !bFav) return -1;
+        if (!aFav && bFav) return 1;
+        return b.timestamp - a.timestamp;
+    });
+    
+    list.innerHTML = '';
+    myChats.forEach(chat => {
+        const ed = editors.find(e => e.id === chat.editorId) || { name: 'Unknown Editor', photo_url: window.DEFAULT_AVATAR };
+        const isFav = favChats.includes(chat.chatId);
+        
+        const div = document.createElement('div');
+        div.className = 'glass-card p-3';
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.justifyContent = 'space-between';
+        div.style.cursor = 'pointer';
+        div.style.transition = 'all 0.2s';
+        
+        let msgText = chat.lastMsg.text;
+        if (msgText.length > 40) msgText = msgText.substring(0, 40) + '...';
+        
+        div.innerHTML = `
+            <div style="display:flex; align-items:center; gap:12px; flex: 1; overflow: hidden;">
+                <img src="${ed.photo_url || window.DEFAULT_AVATAR}" style="width:48px; height:48px; border-radius:50%; object-fit:cover; flex-shrink: 0;">
+                <div style="min-width: 0; flex: 1;">
+                    <h4 style="margin:0 0 4px; display:flex; align-items:center; gap:6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        ${ed.name}
+                        ${isFav ? '<span style="color: gold; font-size: 14px; flex-shrink: 0;">⭐</span>' : ''}
+                    </h4>
+                    <p style="margin:0; font-size:0.85rem; color:var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${chat.lastMsg.senderId === currentUser.uid ? 'You: ' : ''}${msgText}</p>
+                </div>
+            </div>
+            <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap: 8px; flex-shrink: 0; padding-left: 10px;">
+                <span class="text-xs text-secondary">${new Date(chat.timestamp).toLocaleDateString()}</span>
+                <div class="chat-actions" style="display:flex; gap: 5px;" onclick="event.stopPropagation();">
+                    <button class="btn btn-sm secondary favorite-chat-btn" data-id="${chat.chatId}" style="padding:4px 8px; font-size: 14px;" title="${isFav ? 'Unfavorite' : 'Favorite'}">
+                        ${isFav ? '⭐' : '☆'}
+                    </button>
+                    <button class="btn btn-sm danger delete-chat-btn" data-id="${chat.chatId}" style="padding:4px 8px;" title="Delete Chat">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        div.addEventListener('click', () => {
+            window.openClientSideChat(chat.editorId, chat.chatId, ed.name);
+        });
+        
+        const favBtn = div.querySelector('.favorite-chat-btn');
+        favBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            let newFavs = [...favChats];
+            if (isFav) {
+                newFavs = newFavs.filter(id => id !== chat.chatId);
+            } else {
+                newFavs.push(chat.chatId);
+            }
+            try {
+                await update(ref(db, `users/${currentUser.uid}`), { favoriteChats: newFavs });
+                if(allUsers[currentUser.uid]) allUsers[currentUser.uid].favoriteChats = newFavs;
+                // Re-render manually using the global intercepted chats or current snapshot
+                // Since onValue will trigger if favoriteChats in users updates? No, users is a separate listener!
+                // Let's trigger render with the latest fetched data. We can fetch using a direct get or wait for next event.
+                // Wait, allUsers updates via its own onValue listener. This won't trigger clientChatsListener.
+                // So we manually re-render list with current data.
+                renderClientChatsList(data);
+            } catch(e) {
+                console.error(e);
+            }
+        });
+        
+        const delBtn = div.querySelector('.delete-chat-btn');
+        delBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if(!confirm("Are you sure you want to delete this chat? It can be restored if you message again.")) return;
+            try {
+                await remove(ref(db, `editor_client_chats/${chat.chatId}`));
+            } catch(e) {
+                console.error(e);
+            }
+        });
+        
+        list.appendChild(div);
+    });
+}
 
 function renderUserApplicationsList() {
     const list = document.getElementById('userApplicationsList');
@@ -3417,6 +3603,20 @@ if (closeEccChat) {
     });
 }
 
+window.openClientSideChat = (editorId, chatId, editorName) => {
+    editorClientChatModal.style.display = 'flex';
+    window.isInterceptingChat = false;
+    currentEccPath = `editor_client_chats/${chatId}/messages`;
+    document.getElementById('eccUserName').textContent = 'Chat with ' + editorName;
+    
+    if (eccListener) eccListener();
+    eccListener = onValue(ref(db, currentEccPath), (snap) => {
+        const data = snap.val() || {};
+        const messages = Object.keys(data).map(k => ({id: k, ...data[k]})).sort((a,b) => a.timestamp - b.timestamp);
+        renderEccChat(messages);
+    });
+};
+
 if (sendEccMsgBtn && eccChatInput) {
     const sendEccMsg = async () => {
         const text = eccChatInput.value.trim();
@@ -3519,16 +3719,58 @@ function renderJobDashboard() {
     
     // Find unique clients from requests
     const myRequests = allRequests.filter(r => r.editorId === myEditorProfile.id);
-    const uniqueClientIds = [...new Set(myRequests.map(r => r.userId))];
+    const uniqueClientIds = new Set(myRequests.map(r => r.userId));
     
-    if (uniqueClientIds.length === 0) {
-        jobDashboardClientsList.innerHTML = '<div class="text-center text-secondary w-100" style="grid-column: 1/-1;">You do not have any clients yet.</div>';
+    // Add clients from chats
+    const data = window.globalClientChatsData || {};
+    const chatData = [];
+    Object.keys(data).forEach(key => {
+        const parts = key.split('_');
+        if (parts.length === 2 && parts[0] === myEditorProfile.id) {
+            uniqueClientIds.add(parts[1]);
+        }
+    });
+    
+    if (uniqueClientIds.size === 0) {
+        jobDashboardClientsList.innerHTML = '<div class="text-center text-secondary w-100" style="grid-column: 1/-1;">You do not have any clients or messages yet.</div>';
         return;
     }
     
+    // Build array of clients with last msg data
+    const clients = Array.from(uniqueClientIds).map(clientId => {
+        const chatKey = `${myEditorProfile.id}_${clientId}`;
+        const msgsObj = (data[chatKey] && data[chatKey].messages) || {};
+        const msgs = Object.values(msgsObj);
+        let unread = false;
+        let lastTimestamp = 0;
+        let lastMsgText = '';
+        
+        if (msgs.length > 0) {
+            const lastMsg = msgs.sort((a,b) => b.timestamp - a.timestamp)[0];
+            lastTimestamp = lastMsg.timestamp;
+            lastMsgText = lastMsg.text;
+            if (lastMsg.senderId !== currentUser.uid) {
+                unread = true;
+            }
+        }
+        
+        return { clientId, unread, lastTimestamp, lastMsgText, chatKey };
+    });
+    
+    const userProfile = allUsers[currentUser.uid] || {};
+    const favChats = userProfile.favoriteChats || [];
+    
+    clients.sort((a, b) => {
+        const aFav = favChats.includes(a.chatKey);
+        const bFav = favChats.includes(b.chatKey);
+        if (aFav && !bFav) return -1;
+        if (!aFav && bFav) return 1;
+        return b.lastTimestamp - a.lastTimestamp;
+    });
+    
     jobDashboardClientsList.innerHTML = '';
-    uniqueClientIds.forEach(clientId => {
-        const u = allUsers[clientId] || {};
+    clients.forEach(client => {
+        const u = allUsers[client.clientId] || {};
         const name = u.firstName ? (u.firstName + ' ' + (u.lastName || '')).trim() : 'Anonymous';
         const photo = u.photoUrl || window.DEFAULT_AVATAR;
         
@@ -3541,27 +3783,82 @@ function renderJobDashboard() {
         div.style.flexDirection = 'column';
         div.style.alignItems = 'center';
         div.style.textAlign = 'center';
+        div.style.position = 'relative';
+        
+        let msgPreview = client.lastMsgText;
+        if (msgPreview.length > 30) msgPreview = msgPreview.substring(0, 30) + '...';
+        
+        const isFav = allUsers[currentUser.uid]?.favoriteChats?.includes(client.chatKey);
         
         div.innerHTML = `
-            <img src="${photo}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; margin-bottom:10px;">
-            <h4 style="margin:0 0 5px;">${name}</h4>
+            ${client.unread ? '<div style="position:absolute; top:10px; right:10px; background:var(--warning); width:12px; height:12px; border-radius:50%; box-shadow:0 0 8px var(--warning);"></div>' : ''}
+            
+            <div style="position:absolute; top:5px; left:5px; display:flex; gap:5px;">
+                <button class="btn fav-chat-btn-editor" style="background:transparent; border:none; color:var(--warning); cursor:pointer; padding:5px;" title="Favorite this client chat">
+                    ${isFav ? '⭐' : '☆'}
+                </button>
+            </div>
+            
+            <button class="btn delete-chat-btn-editor" style="position:absolute; top:5px; right:5px; background:transparent; border:none; color:var(--danger); cursor:pointer; padding:5px; ${client.unread ? 'right: 25px;' : ''}" title="Delete Chat From Editor Side">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+            
+            <img src="${photo}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; margin-bottom:10px; margin-top:20px;">
+            <h4 style="margin:0 0 5px; display:flex; align-items:center; gap:5px; justify-content:center;">
+                ${name}
+            </h4>
             <p style="font-size:0.8rem; color:var(--text-secondary); margin:0 0 10px; word-break:break-all;">${u.email || 'No email'}</p>
+            ${msgPreview ? `<p style="font-size:0.8rem; color:var(--text-secondary); margin:0 0 10px; font-style:italic;">"${msgPreview}"</p>` : ''}
             <button class="btn secondary btn-sm w-100 mt-auto msg-client-btn">💬 Message</button>
         `;
+        
+        const favBtnEditor = div.querySelector('.fav-chat-btn-editor');
+        if (favBtnEditor) {
+            favBtnEditor.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                let favChats = allUsers[currentUser.uid]?.favoriteChats || [];
+                let newFavs = [...favChats];
+                if (isFav) {
+                    newFavs = newFavs.filter(id => id !== client.chatKey);
+                } else {
+                    newFavs.push(client.chatKey);
+                }
+                try {
+                    await update(ref(db, `users/${currentUser.uid}`), { favoriteChats: newFavs });
+                    if(allUsers[currentUser.uid]) allUsers[currentUser.uid].favoriteChats = newFavs;
+                    renderJobDashboard(); // re-render to reflect change
+                } catch(e) {
+                    console.error(e);
+                }
+            });
+        }
+        
+        const delBtnEditor = div.querySelector('.delete-chat-btn-editor');
+        if (delBtnEditor) {
+            delBtnEditor.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if(!confirm("Are you sure you want to delete this chat with the client?")) return;
+                try {
+                    await remove(ref(db, `editor_client_chats/${client.chatKey}`));
+                } catch(err) {
+                    console.error(err);
+                }
+            });
+        }
         
         div.querySelector('.msg-client-btn').addEventListener('click', () => {
             jobDashboardModal.style.display = 'none';
             editorClientChatModal.style.display = 'flex';
             window.isInterceptingChat = false;
             
-            currentEccPath = `editor_client_chats/${myEditorProfile.id}_${clientId}/messages`;
+            currentEccPath = `editor_client_chats/${client.chatKey}/messages`;
             document.getElementById('eccUserName').textContent = 'Chat with ' + name;
             
             if (eccListener) eccListener(); // Unsubscribe prev
             
             eccListener = onValue(ref(db, currentEccPath), (snap) => {
-                const data = snap.val() || {};
-                const messages = Object.keys(data).map(k => ({id: k, ...data[k]})).sort((a,b) => a.timestamp - b.timestamp);
+                const snapData = snap.val() || {};
+                const messages = Object.keys(snapData).map(k => ({id: k, ...snapData[k]})).sort((a,b) => a.timestamp - b.timestamp);
                 renderEccChat(messages);
             });
         });
