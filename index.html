@@ -10,63 +10,29 @@
 </head>
 <body style="margin: 0; display: block;">
 
-    <div id="splashScreenOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 100000; background: linear-gradient(to bottom, #020111 20%, #20124d 100%); overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.8s ease-out, visibility 0.8s ease-out;">
-        <!-- Stars Background -->
-        <div class="stars"></div>
-        <div class="twinkling"></div>
-        
-        <!-- Glowing Moon / Orb -->
-        <div class="splash-moon"></div>
-
-        <!-- Parallax Ocean -->
-        <div class="ocean-container" style="position: absolute; inset: 0; pointer-events: none;">
-            <div class="ocean-reflection"></div>
-            <div class="wave wave-back"></div>
-            <div class="wave wave-mid"></div>
-            <div class="wave wave-front"></div>
+    <div id="splashScreenOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 100000; background: #030a16; overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.8s ease-out;">
+        <div class="ocean-container" style="position: absolute; inset: 0;">
+            <div class="wave wave1"></div>
+            <div class="wave wave2"></div>
+            <div class="wave wave3"></div>
         </div>
-
-        <div style="z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; transform: translateY(-30px);">
-            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="url(#logo-grad)" stroke-width="1.5" style="margin-bottom: 25px; animation: floatLogo 4s ease-in-out infinite; filter: drop-shadow(0 0 15px rgba(96, 165, 250, 0.6));">
-                <defs>
-                    <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#fff"/>
-                        <stop offset="100%" stop-color="#3b82f6"/>
-                    </linearGradient>
-                </defs>
-                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                <polyline points="2 17 12 22 22 17"></polyline>
-                <polyline points="2 12 12 17 22 12"></polyline>
-            </svg>
-            <h1 style="font-family: 'Outfit', sans-serif; font-size: 3.5rem; font-weight: 800; color: white; margin: 0; letter-spacing: 2px; animation: textGlow 3s infinite alternate;">Lumina</h1>
-            <p style="font-family: 'Outfit', sans-serif; font-size: 1.1rem; color: rgba(255,255,255,0.7); animation: fadeIn 1s 0.8s both; letter-spacing: 1px; margin-top: 10px;">Awakening your workspace...</p>
-        </div>
+        <svg width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="z-index: 2; margin-bottom: 20px; animation: floatLogo 3s ease-in-out infinite; color: #60a5fa; filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.8));">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+        </svg>
+        <h1 style="z-index: 2; font-family: 'Outfit', sans-serif; font-size: 2.5rem; font-weight: 800; color: white; margin: 0; animation: fadeIn 1s, textGlow 2s infinite alternate;">Lumina</h1>
+        <p style="z-index: 2; font-family: 'Outfit', sans-serif; color: rgba(255,255,255,0.7); animation: fadeIn 1s 0.5s both;">Loading your perfect match...</p>
 
         <style>
-            @keyframes move-background { from { transform: translate3d(0px, 0px, 0px); } to { transform: translate3d(-1000px, 0px, 0px); } }
-            
-            .stars { background: transparent url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><circle cx="20" cy="20" r="1" fill="white" opacity="0.8"/><circle cx="150" cy="40" r="1.5" fill="white" opacity="0.6"/><circle cx="80" cy="120" r="1" fill="white" opacity="0.5"/><circle cx="180" cy="180" r="2" fill="white" opacity="0.3"/></svg>') repeat top center; position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 1; opacity: 0.5; }
-            
-            .twinkling { background: transparent url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="transparent"/><circle cx="50" cy="50" r="2" fill="white" filter="blur(1px)" opacity="0.5"/><circle cx="250" cy="150" r="3" fill="white" filter="blur(2px)" opacity="0.3"/></svg>') repeat top center; position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 200%; height: 100%; z-index: 2; animation: move-background 70s linear infinite; }
-            
-            .splash-moon { position: absolute; top: 15%; left: 50%; transform: translateX(-50%); width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(200,220,255,0.6) 30%, rgba(96,165,250,0) 70%); box-shadow: 0 0 100px rgba(96, 165, 250, 0.5), 0 0 200px rgba(59, 130, 246, 0.3); z-index: 3; animation: pulseMoon 6s infinite alternate; mix-blend-mode: screen; pointer-events: none; }
-
-            .ocean-reflection { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 400px; height: 40vh; background: linear-gradient(to bottom, rgba(96, 165, 250, 0.4) 0%, transparent 100%); filter: blur(30px); z-index: 4; pointer-events: none; }
-
-            .wave { position: absolute; bottom: 0; left: 0; width: 200%; height: 35vh; background-repeat: repeat-x; background-size: 1000px 100%; }
-            .wave-back { background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1000 200" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M0,80 C250,200 250,0 500,80 C750,200 750,0 1000,80 L1000,200 L0,200 Z" fill="rgba(30, 58, 138, 0.5)"/></svg>'); animation: waveAnim 25s linear infinite; z-index: 5; height: 40vh; opacity: 0.8; }
-            .wave-mid { background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1000 200" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M0,100 C250,200 250,0 500,100 C750,200 750,0 1000,100 L1000,200 L0,200 Z" fill="rgba(29, 78, 216, 0.6)"/></svg>'); animation: waveAnim 20s linear infinite reverse; z-index: 6; height: 30vh; opacity: 0.9; }
-            .wave-front { background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1000 200" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M0,120 C250,200 250,0 500,120 C750,200 750,0 1000,120 L1000,200 L0,200 Z" fill="rgba(15, 23, 42, 1)"/></svg>'); animation: waveAnim 15s linear infinite; z-index: 7; height: 20vh; }
-            
-            @keyframes pulseMoon { 0% { opacity: 0.7; transform: translateX(-50%) scale(0.95); } 100% { opacity: 1; transform: translateX(-50%) scale(1.05); } }
+            .wave { position: absolute; bottom: 0; left: 0; width: 200%; height: 200px; background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 800 100" xmlns="http://www.w3.org/2000/svg"><path d="M0,50 Q100,0 200,50 T400,50 T600,50 T800,50 L800,100 L0,100 Z" fill="rgba(96, 165, 250, 0.2)"/></svg>') repeat-x; background-size: 800px 100px; }
+            .wave1 { animation: waveAnim 15s linear infinite; z-index: 1; bottom: 0; }
+            .wave2 { background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 800 100" xmlns="http://www.w3.org/2000/svg"><path d="M0,50 Q100,20 200,50 T400,50 T600,50 T800,50 L800,100 L0,100 Z" fill="rgba(59, 130, 246, 0.3)"/></svg>'); animation: waveAnim 12s linear infinite reverse; z-index: 2; bottom: -20px; }
+            .wave3 { background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 800 100" xmlns="http://www.w3.org/2000/svg"><path d="M0,50 Q100,80 200,50 T400,50 T600,50 T800,50 L800,100 L0,100 Z" fill="rgba(30, 64, 175, 0.5)"/></svg>'); animation: waveAnim 20s linear infinite; z-index: 3; bottom: -40px; }
             @keyframes waveAnim { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-            @keyframes floatLogo { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-15px) scale(1.05); } }
-            @keyframes textGlow { from { text-shadow: 0 0 10px rgba(96,165,250,0.4), 0 0 20px rgba(96,165,250,0.2); } to { text-shadow: 0 0 20px rgba(96,165,250,0.8), 0 0 40px rgba(96,165,250,0.5); } }
-            @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-            
-            /* Entry animations for exactly what happens when splash screen leaves */
-            .app-entrance-anim { animation: appEntrance 1s cubic-bezier(0.16, 1, 0.3, 1) forwards !important; }
-            @keyframes appEntrance { 0% { opacity: 0; transform: scale(0.95) translateY(20px); filter: blur(10px); } 100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); } }
+            @keyframes floatLogo { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+            @keyframes textGlow { from { text-shadow: 0 0 10px rgba(96,165,250,0.2); } to { text-shadow: 0 0 25px rgba(96,165,250,0.9); } }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         </style>
     </div>
 
