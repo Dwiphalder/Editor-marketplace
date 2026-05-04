@@ -326,6 +326,7 @@ onAuthStateChanged(auth, async (user) => {
             const supportBtn = document.getElementById('supportBtn');
             if(supportBtn) supportBtn.style.display = 'block';
             if(typeof listenToUserSupportChats === 'function') listenToUserSupportChats();
+            if(typeof listenToClientChats === 'function') listenToClientChats();
             let profilePic = user.photoURL;
             if(allUsers[user.uid] && allUsers[user.uid].photoUrl) {
                 profilePic = allUsers[user.uid].photoUrl;
@@ -666,6 +667,14 @@ if(bottomNavMessages) {
             return;
         }
         window.switchNavView('messages');
+        if (typeof listenToClientChats === 'function') {
+            listenToClientChats();
+        } else {
+            // Because listenToClientChats might be declared after
+            setTimeout(() => {
+                if (typeof listenToClientChats === 'function') listenToClientChats();
+            }, 100);
+        }
     });
 }
 function updateNavIndicator(view) {
@@ -2125,24 +2134,63 @@ function updateChatNotifications(data) {
     updateBadge('jobDashboardUnreadBadge', unreadClients);
 }
 
+let lastRenderedChats = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    const chatSearchInput = document.getElementById('chatSearchInput');
+    if (chatSearchInput) {
+        chatSearchInput.addEventListener('input', () => {
+            renderChatsToDOM();
+        });
+    }
+});
+
 function renderClientChatsList(data) {
     const list = document.getElementById('clientChatsList');
     if (!list) return;
     
     if (!currentUser) return;
+    window.globalClientChatsData = data;
     
-    // filter chats involving currentUser.uid (as client)
+    // filter chats involving currentUser.uid (either as client or editor)
     const myChats = [];
     Object.keys(data).forEach(key => {
         const parts = key.split('_');
-        if (parts.length === 2 && parts[1] === currentUser.uid) { // _clientId
+        if (parts.length === 2 && (parts[1] === currentUser.uid || parts[0] === currentUser.uid)) {
+            const isClient = (parts[1] === currentUser.uid); // They are the client
+            const otherPartyId = isClient ? parts[0] : parts[1];
+            
             const msgsObj = data[key].messages || {};
             const msgs = Object.values(msgsObj);
+            
+            let name = 'Unknown User';
+            let photo_url = window.DEFAULT_AVATAR;
+            
+            if (isClient) {
+                // Find Editor
+                const ed = typeof editors !== 'undefined' ? editors.find(e => e.id === otherPartyId) : null;
+                if (ed) {
+                    name = ed.name || 'Editor';
+                    photo_url = ed.photo_url || window.DEFAULT_AVATAR;
+                }
+            } else {
+                // Find Client
+                const cUser = typeof allUsers !== 'undefined' ? allUsers[otherPartyId] : null;
+                if (cUser) {
+                    name = (cUser.fname || '') + ' ' + (cUser.lname || '');
+                    if (!name.trim()) name = cUser.name || cUser.email || 'Client';
+                    photo_url = cUser.avatarUrl || window.DEFAULT_AVATAR;
+                }
+            }
+            
             if (msgs.length > 0) {
                 const lastMsg = msgs.sort((a,b) => b.timestamp - a.timestamp)[0];
                 myChats.push({
                     chatId: key,
-                    editorId: parts[0],
+                    otherPartyId: otherPartyId,
+                    isClient: isClient,
+                    name: name,
+                    photo_url: photo_url,
                     lastMsg: lastMsg,
                     timestamp: lastMsg.timestamp
                 });
@@ -2150,16 +2198,32 @@ function renderClientChatsList(data) {
         }
     });
     
-    if (myChats.length === 0) {
-        list.innerHTML = '<div class="glass-card p-4 text-center text-secondary">No conversations yet.</div>';
+    lastRenderedChats = myChats;
+    renderChatsToDOM();
+}
+
+function renderChatsToDOM() {
+    const list = document.getElementById('clientChatsList');
+    if (!list) return;
+    const searchInput = document.getElementById('chatSearchInput');
+    const filterText = (searchInput ? searchInput.value.toLowerCase() : '');
+
+    let filtered = lastRenderedChats.filter(chat => chat.name.toLowerCase().includes(filterText));
+
+    if (filtered.length === 0) {
+        if (lastRenderedChats.length === 0) {
+            list.innerHTML = '<div class="glass-card p-4 text-center text-secondary">No conversations yet.</div>';
+        } else {
+            list.innerHTML = '<div class="glass-card p-4 text-center text-secondary">No chats found for your search.</div>';
+        }
         return;
     }
     
     // Get favorites from user profile
-    const userProfile = allUsers[currentUser.uid] || {};
+    const userProfile = (allUsers && currentUser && allUsers[currentUser.uid]) ? allUsers[currentUser.uid] : {};
     const favChats = userProfile.favoriteChats || [];
     
-    myChats.sort((a, b) => {
+    filtered.sort((a, b) => {
         const aFav = favChats.includes(a.chatId);
         const bFav = favChats.includes(b.chatId);
         if (aFav && !bFav) return -1;
@@ -2168,8 +2232,7 @@ function renderClientChatsList(data) {
     });
     
     list.innerHTML = '';
-    myChats.forEach(chat => {
-        const ed = editors.find(e => e.id === chat.editorId) || { name: 'Unknown Editor', photo_url: window.DEFAULT_AVATAR };
+    filtered.forEach(chat => {
         const isFav = favChats.includes(chat.chatId);
         
         const div = document.createElement('div');
@@ -2180,35 +2243,39 @@ function renderClientChatsList(data) {
         div.style.cursor = 'pointer';
         div.style.transition = 'all 0.2s';
         
-        let msgText = chat.lastMsg.text;
+        let msgText = chat.lastMsg.text || '';
         if (msgText.length > 40) msgText = msgText.substring(0, 40) + '...';
         
         div.innerHTML = `
             <div style="display:flex; align-items:center; gap:12px; flex: 1; overflow: hidden;">
-                <img src="${ed.photo_url || window.DEFAULT_AVATAR}" style="width:48px; height:48px; border-radius:50%; object-fit:cover; flex-shrink: 0;">
+                <img src="${chat.photo_url || window.DEFAULT_AVATAR}" style="width:52px; height:52px; border-radius:50%; object-fit:cover; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.1);">
                 <div style="min-width: 0; flex: 1;">
-                    <h4 style="margin:0 0 4px; display:flex; align-items:center; gap:6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        ${ed.name}
-                        ${isFav ? '<span style="color: gold; font-size: 14px; flex-shrink: 0;">⭐</span>' : ''}
+                    <h4 style="margin:0 0 6px; display:flex; align-items:center; justify-content:space-between; gap:6px; white-space: nowrap;">
+                        <span style="overflow: hidden; text-overflow: ellipsis; flex: 1; font-size: 1.05rem;">
+                            ${chat.name} ${!chat.isClient ? '<span style="font-size:0.7em; background:rgba(59,130,246,0.2); color:#60a5fa; padding:2px 6px; border-radius:10px; margin-left:6px; vertical-align:middle;">Client</span>' : ''}
+                        </span>
+                        <span class="text-xs text-secondary" style="flex-shrink: 0;">${new Date(chat.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                     </h4>
-                    <p style="margin:0; font-size:0.85rem; color:var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${chat.lastMsg.senderId === currentUser.uid ? 'You: ' : ''}${msgText}</p>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <p style="margin:0; font-size:0.9rem; color:var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex:1;">
+                            ${chat.lastMsg.senderId === currentUser.uid ? '<span style="color:#60a5fa">You:</span> ' : ''}${msgText}
+                        </p>
+                        ${isFav ? '<span style="color: gold; font-size: 14px; flex-shrink: 0; margin-left: 10px;">⭐</span>' : ''}
+                    </div>
                 </div>
             </div>
-            <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap: 8px; flex-shrink: 0; padding-left: 10px;">
-                <span class="text-xs text-secondary">${new Date(chat.timestamp).toLocaleDateString()}</span>
-                <div class="chat-actions" style="display:flex; gap: 5px;" onclick="event.stopPropagation();">
-                    <button class="btn btn-sm secondary favorite-chat-btn" data-id="${chat.chatId}" style="padding:4px 8px; font-size: 14px;" title="${isFav ? 'Unfavorite' : 'Favorite'}">
-                        ${isFav ? '⭐' : '☆'}
-                    </button>
-                    <button class="btn btn-sm danger delete-chat-btn" data-id="${chat.chatId}" style="padding:4px 8px;" title="Delete Chat">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                    </button>
-                </div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap: 8px; flex-shrink: 0; padding-left: 15px; border-left: 1px solid rgba(255,255,255,0.05); margin-left: 10px;">
+                <button class="btn btn-sm secondary favorite-chat-btn hover-pop" data-id="${chat.chatId}" style="padding:4px 8px; font-size: 14px; background: transparent; border: none; box-shadow: none;" title="${isFav ? 'Unfavorite' : 'Favorite'}">
+                    ${isFav ? '⭐' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>'}
+                </button>
+                <button class="btn btn-sm danger delete-chat-btn hover-pop" data-id="${chat.chatId}" style="padding:4px 8px; background: transparent; border: none; color: #ef4444; box-shadow: none;" title="Delete Chat">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
             </div>
         `;
         
         div.addEventListener('click', () => {
-            window.openClientSideChat(chat.editorId, chat.chatId, ed.name);
+            window.openClientSideChat(chat.otherPartyId, chat.chatId, chat.name, chat.photo_url);
         });
         
         const favBtn = div.querySelector('.favorite-chat-btn');
@@ -2223,31 +2290,27 @@ function renderClientChatsList(data) {
             try {
                 await update(ref(db, `users/${currentUser.uid}`), { favoriteChats: newFavs });
                 if(allUsers[currentUser.uid]) allUsers[currentUser.uid].favoriteChats = newFavs;
-                // Re-render manually using the global intercepted chats or current snapshot
-                // Since onValue will trigger if favoriteChats in users updates? No, users is a separate listener!
-                // Let's trigger render with the latest fetched data. We can fetch using a direct get or wait for next event.
-                // Wait, allUsers updates via its own onValue listener. This won't trigger clientChatsListener.
-                // So we manually re-render list with current data.
-                renderClientChatsList(data);
-            } catch(e) {
-                console.error(e);
+                renderChatsToDOM(); // Re-render DOM
+            } catch(err) {
+                console.error(err);
             }
         });
         
         const delBtn = div.querySelector('.delete-chat-btn');
         delBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            if(!confirm("Are you sure you want to delete this chat? It can be restored if you message again.")) return;
+            if(!confirm("Are you sure you want to delete this chat?")) return;
             try {
                 await remove(ref(db, `editor_client_chats/${chat.chatId}`));
-            } catch(e) {
-                console.error(e);
+            } catch(err) {
+                console.error(err);
             }
         });
         
         list.appendChild(div);
     });
 }
+
 
 function renderUserApplicationsList() {
     const list = document.getElementById('userApplicationsList');
@@ -2438,41 +2501,6 @@ upAvatarUpload.addEventListener('change', (e) => {
     };
     reader.readAsDataURL(file);
 });
-
-const showAdsProfileBtn = document.getElementById('showAdsProfileBtn');
-const profileAdsModal = document.getElementById('profileAdsModal');
-const closeProfileAdsModal = document.getElementById('closeProfileAdsModal');
-const profileAdsLoading = document.getElementById('profileAdsLoading');
-const profileAdsContainer = document.getElementById('profileAdsContainer');
-
-if (showAdsProfileBtn && profileAdsModal && closeProfileAdsModal) {
-    showAdsProfileBtn.addEventListener('click', () => {
-        profileAdsModal.style.display = 'flex';
-        profileAdsLoading.style.display = 'flex';
-        profileAdsContainer.style.display = 'none';
-
-        // Simulate loading time for interactive ad and then show it
-        setTimeout(() => {
-            profileAdsLoading.style.display = 'none';
-            profileAdsContainer.style.display = 'flex';
-            
-            setTimeout(() => {
-                if (!profileAdsContainer.dataset.adsPushed) {
-                    try {
-                        (window.adsbygoogle = window.adsbygoogle || []).push({});
-                        profileAdsContainer.dataset.adsPushed = "true";
-                    } catch (e) {
-                        console.error("AdSense Error in Profile Ads:", e);
-                    }
-                }
-            }, 50); // give the browser time to paint with display: flex
-        }, 1500); // 1.5 seconds loading simulation
-    });
-
-    closeProfileAdsModal.addEventListener('click', () => {
-        profileAdsModal.style.display = 'none';
-    });
-}
 
 saveUserProfileBtn.addEventListener('click', async () => {
     const fName = document.getElementById('upFirstName').value.trim();
@@ -3773,19 +3801,26 @@ if (closeEccChat) {
     });
 }
 
-window.openClientSideChat = (editorId, chatId, editorName) => {
+window.openClientSideChat = (otherId, chatId, otherName, otherPhotoUrl) => {
     editorClientChatModal.style.display = 'flex';
     window.isInterceptingChat = false;
     currentEccPath = `editor_client_chats/${chatId}/messages`;
     
-    const ed = editors.find(e => e.id === editorId);
-    const photoUrl = ed && ed.photo_url ? ed.photo_url : window.DEFAULT_AVATAR;
+    // Attempt fallback lookup if photoUrl not provided
+    let photoUrl = otherPhotoUrl;
+    if (!photoUrl) {
+        const ed = editors.find(e => e.id === otherId);
+        const cUser = allUsers[otherId];
+        if (ed && ed.photo_url) photoUrl = ed.photo_url;
+        else if (cUser && cUser.avatarUrl) photoUrl = cUser.avatarUrl;
+        else photoUrl = window.DEFAULT_AVATAR;
+    }
     
     document.getElementById('eccUserName').innerHTML = `
         <div style="display:flex; align-items:center; gap: 8px;">
-            <img src="${photoUrl}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+            <img src="${photoUrl}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);">
             <div>
-                <div style="font-size: 1.1rem; font-weight: bold;">${editorName}</div>
+                <div style="font-size: 1.1rem; font-weight: bold;">${otherName}</div>
             </div>
         </div>
     `;
@@ -4260,12 +4295,12 @@ function setupAdminInterceptListener() {
     }
 }
 
-window.openInterceptChat = (chatId) => {
+window.openInterceptChat = (chatId, clientName, editorName) => {
     const modal = document.getElementById('editorClientChatModal');
     if(modal) modal.style.display = 'flex';
     
     currentEccPath = `editor_client_chats/${chatId}/messages`;
-    document.getElementById('eccUserName').textContent = 'Intercepted Chat View';
+    document.getElementById('eccUserName').textContent = (clientName && editorName) ? `Chat: ${clientName} ⇄ ${editorName}` : 'Admin Chat View';
     
     // We also set the ID to send from Admin side so it stands out
     window.isInterceptingChat = true;
@@ -4311,8 +4346,16 @@ function renderAdminInterceptedChats() {
         const editorId = parts[0];
         const clientId = parts[1];
         
-        const ed = editors.find(e => e.id === editorId);
-        const cliName = allUsers[clientId] ? allUsers[clientId].email : clientId;
+        const ed = typeof editors !== 'undefined' ? editors.find(e => e.id === editorId) : null;
+        let cUser = typeof allUsers !== 'undefined' ? allUsers[clientId] : null;
+        let cliName = clientId;
+        if(cUser) {
+            cliName = (cUser.fname || '') + ' ' + (cUser.lname || '');
+            if (!cliName.trim()) cliName = cUser.name || cUser.email || clientId;
+        }
+        
+        // Helper to escape single quotes
+        const escapeAttr = (str) => String(str || '').replace(/'/g, "\\'");
         
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -4320,7 +4363,7 @@ function renderAdminInterceptedChats() {
             <td><strong>${ed ? ed.name : 'Unknown Editor'}</strong></td>
             <td><span class="text-xs text-secondary">${new Date(chat.lastUpdated).toLocaleString()}</span></td>
             <td>
-                <button class="btn secondary btn-sm" onclick="window.openInterceptChat('${chat.id}')">View Chat / Reply</button>
+                <button class="btn secondary btn-sm" onclick="window.openInterceptChat('${chat.id}', '${escapeAttr(cliName)}', '${escapeAttr(ed ? ed.name : 'Unknown Editor')}')">View Chat / Reply</button>
             </td>
         `;
         list.appendChild(tr);
