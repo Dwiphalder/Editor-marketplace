@@ -10,29 +10,57 @@
 </head>
 <body style="margin: 0; display: block;">
 
-    <div id="splashScreenOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 100000; background: #030a16; overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.8s ease-out;">
-        <div class="ocean-container" style="position: absolute; inset: 0;">
-            <div class="wave wave1"></div>
-            <div class="wave wave2"></div>
-            <div class="wave wave3"></div>
+    <div id="splashScreenOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 100000; background: linear-gradient(180deg, #020617 0%, #0f172a 100%); overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.8s ease-out; perspective: 1000px;">
+        
+        <!-- Stars/Particles in background -->
+        <div style="position: absolute; inset: 0; background-image: radial-gradient(circle at center, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 30px 30px; opacity: 0.4;"></div>
+
+        <!-- Ocean Parallax Container -->
+        <div class="ocean-container" style="position: absolute; bottom: 0; left: 0; width: 100%; height: 50vh; transform-style: preserve-3d;">
+            <!-- Back Wave -->
+            <div class="wave wave3" style="transform: translateZ(-100px) scale(1.2);"></div>
+            <!-- Mid Wave -->
+            <div class="wave wave2" style="transform: translateZ(-50px) scale(1.1);"></div>
+            <!-- Front Wave -->
+            <div class="wave wave1" style="transform: translateZ(0) scale(1);"></div>
         </div>
-        <svg width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="z-index: 2; margin-bottom: 20px; animation: floatLogo 3s ease-in-out infinite; color: #60a5fa; filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.8));">
-            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-            <polyline points="2 17 12 22 22 17"></polyline>
-            <polyline points="2 12 12 17 22 12"></polyline>
-        </svg>
-        <h1 style="z-index: 2; font-family: 'Outfit', sans-serif; font-size: 2.5rem; font-weight: 800; color: white; margin: 0; animation: fadeIn 1s, textGlow 2s infinite alternate;">Lumina</h1>
-        <p style="z-index: 2; font-family: 'Outfit', sans-serif; color: rgba(255,255,255,0.7); animation: fadeIn 1s 0.5s both;">Loading your perfect match...</p>
+
+        <div style="z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; transform: translateY(-50px);">
+            <!-- Animated Logo -->
+            <div style="position: relative; width: 100px; height: 100px; margin-bottom: 30px; animation: floatLogo 4s ease-in-out infinite;">
+                <div style="position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, rgba(96,165,250,0.6) 0%, transparent 70%); animation: pulseGlow 2s infinite alternate;"></div>
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="position:absolute; top: 10px; left: 10px; color: #fff; filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.8));">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                    <polyline points="2 17 12 22 22 17"></polyline>
+                    <polyline points="2 12 12 17 22 12"></polyline>
+                </svg>
+            </div>
+            
+            <h1 style="font-family: 'Outfit', sans-serif; font-size: 3.5rem; font-weight: 800; color: white; margin: 0; letter-spacing: 2px; animation: fadeIn 1s, textGlow 2s infinite alternate;">LUMINA</h1>
+            <p style="font-family: 'Inter', sans-serif; font-size: 1.1rem; color: rgba(255,255,255,0.7); animation: fadeIn 1s 0.6s both; margin-top: 10px; letter-spacing: 1px; text-transform: uppercase;">Discover top visionaries</p>
+            
+            <!-- Loading Indicator -->
+            <div style="margin-top: 40px; display: flex; gap: 8px; animation: fadeIn 1s 1s both;">
+                <div class="loading-dot"></div>
+                <div class="loading-dot" style="animation-delay: 0.2s;"></div>
+                <div class="loading-dot" style="animation-delay: 0.4s;"></div>
+            </div>
+        </div>
 
         <style>
-            .wave { position: absolute; bottom: 0; left: 0; width: 200%; height: 200px; background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 800 100" xmlns="http://www.w3.org/2000/svg"><path d="M0,50 Q100,0 200,50 T400,50 T600,50 T800,50 L800,100 L0,100 Z" fill="rgba(96, 165, 250, 0.2)"/></svg>') repeat-x; background-size: 800px 100px; }
-            .wave1 { animation: waveAnim 15s linear infinite; z-index: 1; bottom: 0; }
-            .wave2 { background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 800 100" xmlns="http://www.w3.org/2000/svg"><path d="M0,50 Q100,20 200,50 T400,50 T600,50 T800,50 L800,100 L0,100 Z" fill="rgba(59, 130, 246, 0.3)"/></svg>'); animation: waveAnim 12s linear infinite reverse; z-index: 2; bottom: -20px; }
-            .wave3 { background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 800 100" xmlns="http://www.w3.org/2000/svg"><path d="M0,50 Q100,80 200,50 T400,50 T600,50 T800,50 L800,100 L0,100 Z" fill="rgba(30, 64, 175, 0.5)"/></svg>'); animation: waveAnim 20s linear infinite; z-index: 3; bottom: -40px; }
+            .wave { position: absolute; bottom: 0; left: 0; width: 200%; height: 250px; background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 800 150" xmlns="http://www.w3.org/2000/svg"><path d="M0,75 Q100,0 200,75 T400,75 T600,75 T800,75 L800,150 L0,150 Z" fill="rgba(96, 165, 250, 0.15)"/></svg>') repeat-x; background-size: 800px 150px; }
+            .wave1 { animation: waveAnim 12s linear infinite; z-index: 3; bottom: 0; }
+            .wave2 { background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 800 150" xmlns="http://www.w3.org/2000/svg"><path d="M0,75 Q100,30 200,75 T400,75 T600,75 T800,75 L800,150 L0,150 Z" fill="rgba(59, 130, 246, 0.25)"/></svg>'); animation: waveAnim 8s linear infinite reverse; z-index: 2; bottom: -20px; }
+            .wave3 { background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 800 150" xmlns="http://www.w3.org/2000/svg"><path d="M0,75 Q100,100 200,75 T400,75 T600,75 T800,75 L800,150 L0,150 Z" fill="rgba(30, 64, 175, 0.4)"/></svg>'); animation: waveAnim 16s linear infinite; z-index: 1; bottom: -40px; }
+            
             @keyframes waveAnim { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-            @keyframes floatLogo { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
-            @keyframes textGlow { from { text-shadow: 0 0 10px rgba(96,165,250,0.2); } to { text-shadow: 0 0 25px rgba(96,165,250,0.9); } }
-            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+            @keyframes floatLogo { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+            @keyframes pulseGlow { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(1.2); opacity: 0.8; } }
+            @keyframes textGlow { from { text-shadow: 0 0 10px rgba(96,165,250,0.3); } to { text-shadow: 0 0 30px rgba(96,165,250,0.8); } }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+            
+            .loading-dot { width: 10px; height: 10px; background-color: #60a5fa; border-radius: 50%; animation: dotBounce 1.4s infinite ease-in-out both; box-shadow: 0 0 10px #60a5fa; }
+            @keyframes dotBounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
         </style>
     </div>
 

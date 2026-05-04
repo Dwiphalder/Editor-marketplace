@@ -366,7 +366,9 @@ onAuthStateChanged(auth, async (user) => {
             await processAuthState();
             if (splashScreenOverlay) {
                 splashScreenOverlay.style.opacity = '0';
-                setTimeout(() => splashScreenOverlay.style.display = 'none', 800);
+                setTimeout(() => {
+                    splashScreenOverlay.style.display = 'none';
+                }, 800);
             }
         }, remainingTime);
     } else {
@@ -835,9 +837,11 @@ let touchstartX = 0;
 let touchendX = 0;
 let touchstartY = 0;
 let touchendY = 0;
+let touchStartTarget = null;
 
 function handleGesture(e) {
-    if (e && e.target && e.target.closest('.horizontal-scroll-container, .filters-scroll, .chat-container, .messages-list')) {
+    const target = touchStartTarget || (e && e.target);
+    if (target && target.closest && target.closest('.horizontal-scroll-container, .filters-scroll, .chat-container, .messages-list, .ad-section')) {
         return;
     }
 
@@ -880,6 +884,7 @@ if (mainApp) {
     mainApp.addEventListener('touchstart', e => {
         touchstartX = e.changedTouches[0].screenX;
         touchstartY = e.changedTouches[0].screenY;
+        touchStartTarget = e.target;
     }, {passive: true});
 
     mainApp.addEventListener('touchend', e => {
