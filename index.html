@@ -568,6 +568,11 @@
                     Admin Panel
                 </button>
 
+                <button id="showAdsProfileBtn" class="btn secondary w-100 mt-3" style="font-weight: bold; justify-content: center; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255,255,255,0.2);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px;"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
+                    Ads
+                </button>
+
                 <div id="jobProfileSection" style="display:none;" class="mt-4">
                     <hr style="margin:20px 0; border:1px solid var(--glass-border);">
                     <h3 style="text-align: left;">My Job Profile</h3>
@@ -1686,6 +1691,29 @@
             <div class="modal-footer" style="padding: 10px; display: flex; gap: 10px;">
                 <input type="text" id="aiSupportChatInput" class="form-control" placeholder="Type a message..." style="flex: 1; border-radius: 8px; border: 1px solid var(--glass-border); padding: 10px; background: rgba(255,255,255,0.05); color: white;">
                 <button class="btn primary" id="sendAiSupportMessageBtn">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Ads Modal -->
+    <div class="modal-overlay" id="profileAdsModal" style="display: none; z-index: 200000; background: rgba(0,0,0,0.85); justify-content: center; align-items: center;">
+        <div class="modal-card small-modal" style="position: relative; padding: 40px 15px 15px; width: 90%; max-width: 400px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <span class="close" id="closeProfileAdsModal" style="position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: var(--text-secondary); width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); border-radius: 50%;">&times;</span>
+            <p class="text-secondary text-sm mb-3">Advertisement</p>
+            
+            <div id="profileAdsLoading" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 250px;">
+                <div class="loading-dot" style="margin-bottom: 10px;"></div>
+                <p>Loading interactive ad...</p>
+            </div>
+            
+            <div id="profileAdsContainer" style="display: none; min-height: 250px; justify-content: center; align-items: center; width: 100%;">
+                <!-- Ads = 1 -->
+                <ins class="adsbygoogle"
+                     style="display:block; width: 100%; min-width: 250px;"
+                     data-ad-client="ca-pub-9309196807486034"
+                     data-ad-slot="7198092069"
+                     data-ad-format="auto"
+                     data-full-width-responsive="true"></ins>
             </div>
         </div>
     </div>

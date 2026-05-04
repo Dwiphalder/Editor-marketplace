@@ -2439,6 +2439,41 @@ upAvatarUpload.addEventListener('change', (e) => {
     reader.readAsDataURL(file);
 });
 
+const showAdsProfileBtn = document.getElementById('showAdsProfileBtn');
+const profileAdsModal = document.getElementById('profileAdsModal');
+const closeProfileAdsModal = document.getElementById('closeProfileAdsModal');
+const profileAdsLoading = document.getElementById('profileAdsLoading');
+const profileAdsContainer = document.getElementById('profileAdsContainer');
+
+if (showAdsProfileBtn && profileAdsModal && closeProfileAdsModal) {
+    showAdsProfileBtn.addEventListener('click', () => {
+        profileAdsModal.style.display = 'flex';
+        profileAdsLoading.style.display = 'flex';
+        profileAdsContainer.style.display = 'none';
+
+        // Simulate loading time for interactive ad and then show it
+        setTimeout(() => {
+            profileAdsLoading.style.display = 'none';
+            profileAdsContainer.style.display = 'flex';
+            
+            setTimeout(() => {
+                if (!profileAdsContainer.dataset.adsPushed) {
+                    try {
+                        (window.adsbygoogle = window.adsbygoogle || []).push({});
+                        profileAdsContainer.dataset.adsPushed = "true";
+                    } catch (e) {
+                        console.error("AdSense Error in Profile Ads:", e);
+                    }
+                }
+            }, 50); // give the browser time to paint with display: flex
+        }, 1500); // 1.5 seconds loading simulation
+    });
+
+    closeProfileAdsModal.addEventListener('click', () => {
+        profileAdsModal.style.display = 'none';
+    });
+}
+
 saveUserProfileBtn.addEventListener('click', async () => {
     const fName = document.getElementById('upFirstName').value.trim();
     const lName = document.getElementById('upLastName').value.trim();
