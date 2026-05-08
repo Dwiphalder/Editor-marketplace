@@ -492,11 +492,12 @@ async function performTabSwitch(toLogin) {
     }
 }
 
-const showCustomToast = (msg, isAnim1) => {
+const showCustomToast = (msg, isAnim1, type = 'error') => {
     const toast = document.getElementById('customToast');
     if (!toast) return;
     toast.textContent = msg;
     toast.className = 'custom-toast'; // reset
+    if (type === 'success') toast.classList.add('toast-success');
     void toast.offsetWidth; // trigger reflow
     toast.classList.add(isAnim1 ? 'toast-anim-1' : 'toast-anim-2');
 };
@@ -587,7 +588,7 @@ if(forgotPasswordLink) {
             
             await sendPasswordResetEmail(auth, email);
             
-            showCustomToast(`Message Sent! A password reset link has been sent to ${email}.`, true);
+            showCustomToast(`Message Sent! A password reset link has been sent to ${email}.`, true, 'success');
             
             const timerInterval = setInterval(() => {
                 forgotPasswordCooldown--;
@@ -1319,7 +1320,36 @@ function renderTrending() {
     } else {
         trendingSection.style.display = 'none';
     }
+    
+    if (window.renderRecentlyViewed) {
+        window.renderRecentlyViewed();
+    }
 }
+
+const recentlyViewedSection = document.getElementById('recentlyViewedSection');
+const recentlyViewedGrid = document.getElementById('recentlyViewedGrid');
+
+window.renderRecentlyViewed = function() {
+    if (!recentlyViewedSection || !recentlyViewedGrid) return;
+    
+    let rv = [];
+    try {
+        rv = JSON.parse(localStorage.getItem('recentlyViewedEditors') || '[]');
+    } catch(e) {}
+    
+    const rvEditors = [];
+    rv.forEach(id => {
+        const ed = editors.find(e => e.id === id && !e.deletionScheduledAt);
+        if (ed) rvEditors.push(ed);
+    });
+    
+    if (rvEditors.length > 0) {
+        recentlyViewedSection.style.display = 'block';
+        recentlyViewedGrid.innerHTML = rvEditors.map((ed, i) => generateCardHTML(ed, i)).join('');
+    } else {
+        recentlyViewedSection.style.display = 'none';
+    }
+};
 
 function renderHomeFeeds() {
     if(loadingMain) loadingMain.style.display = 'none';
@@ -1702,8 +1732,21 @@ document.addEventListener('click', (e) => {
     if (e.target.closest('.btn-hire')) {
         e.stopPropagation();
         const card = e.target.closest('.editor-card, .editor-row-card');
-        if (card) {
-            openEditorProfile(card.dataset.id);
+        
+        // Check if clicking from profile modal
+        let selectedProfileId = card ? card.dataset.id : null;
+        if (!selectedProfileId && e.target.closest('#editorProfileModal')) {
+            selectedProfileId = currentProfileId;
+        }
+        
+        if (selectedProfileId) {
+            if (!currentUser) {
+                loginPromptModal.style.display = 'flex';
+                return;
+            }
+            window.currentHireProfileId = selectedProfileId;
+            const hireModal = document.getElementById('hireRequestModal');
+            if (hireModal) hireModal.style.display = 'flex';
         }
         return;
     }
@@ -1723,6 +1766,16 @@ function openEditorProfile(id) {
     // Increment view count in background
     const newViews = (ed.views || 0) + 1;
     update(ref(db, "editors/" + id), { views: newViews });
+    
+    // Update recently viewed in localStorage
+    try {
+        let rv = JSON.parse(localStorage.getItem('recentlyViewedEditors') || '[]');
+        rv = rv.filter(x => x !== id);
+        rv.unshift(id);
+        if(rv.length > 10) rv = rv.slice(0, 10);
+        localStorage.setItem('recentlyViewedEditors', JSON.stringify(rv));
+        if(typeof renderRecentlyViewed === 'function') renderRecentlyViewed();
+    } catch(e) { console.error(e); }
     
     const verifiedBadge = document.getElementById('epVerified');
     const epAvatar = document.getElementById('epAvatar');
@@ -2041,7 +2094,7 @@ window.populateUserProfileData = function(showMustComplete = false) {
     // Job Profile Section
     const jobProfileSection = document.getElementById('jobProfileSection');
     if (jobProfileSection) {
-        const myEditorProfile = editors.find(e => e.userId === currentUser.uid);
+        const myEditorProfile = editors.find(e => e.userId === currentUser.uid && !e.deletionScheduledAt);
         if (myEditorProfile) {
             jobProfileSection.style.display = 'block';
         } else {
@@ -2091,7 +2144,7 @@ function updateChatNotifications(data) {
     let unreadClients = 0;
     let unreadEditors = 0;
     
-    const myEditorProfile = editors.find(e => e.userId === currentUser.uid);
+    const myEditorProfile = editors.find(e => e.userId === currentUser.uid && !e.deletionScheduledAt);
     
     Object.keys(data).forEach(key => {
         const parts = key.split('_');
@@ -2105,12 +2158,12 @@ function updateChatNotifications(data) {
         
         const lastMsg = msgs.sort((a,b) => b.timestamp - a.timestamp)[0];
         // If I am the client and the last message is from the editor (or admin)
-        if (clientId === currentUser.uid && lastMsg.senderId !== currentUser.uid) {
+        if (clientId === currentUser.uid && lastMsg.senderId !== currentUser.uid && !lastMsg.read) {
             unreadEditors++;
         }
         
         // If I am the editor and the last message is from the client (or admin)
-        if (myEditorProfile && editorId === myEditorProfile.id && lastMsg.senderId !== currentUser.uid) {
+        if (myEditorProfile && editorId === myEditorProfile.id && lastMsg.senderId !== currentUser.uid && !lastMsg.read) {
             unreadClients++;
         }
     });
@@ -2153,11 +2206,14 @@ function renderClientChatsList(data) {
     window.globalClientChatsData = data;
     
     // filter chats involving currentUser.uid (either as client or editor)
+    const myEditorProfile = editors.find(e => e.userId === currentUser.uid && !e.deletionScheduledAt);
     const myChats = [];
     Object.keys(data).forEach(key => {
         const parts = key.split('_');
-        if (parts.length === 2 && (parts[1] === currentUser.uid || parts[0] === currentUser.uid)) {
-            const isClient = (parts[1] === currentUser.uid); // They are the client
+        const isClient = (parts.length === 2 && parts[1] === currentUser.uid);
+        const isEditor = (parts.length === 2 && myEditorProfile && parts[0] === myEditorProfile.id);
+        
+        if (isClient || isEditor) {
             const otherPartyId = isClient ? parts[0] : parts[1];
             
             const msgsObj = data[key].messages || {};
@@ -2246,13 +2302,16 @@ function renderChatsToDOM() {
         let msgText = chat.lastMsg.text || '';
         if (msgText.length > 40) msgText = msgText.substring(0, 40) + '...';
         
+        const isUnread = chat.lastMsg.senderId !== currentUser.uid && !chat.lastMsg.read;
+        const unreadDot = isUnread ? `<span style="display:inline-block; width:10px; height:10px; background:#25d366; border-radius:50%; margin-left:8px; box-shadow: 0 0 5px #25d366;" class="bounce-anim"></span>` : '';
+        
         div.innerHTML = `
             <div style="display:flex; align-items:center; gap:12px; flex: 1; overflow: hidden;">
                 <img src="${chat.photo_url || window.DEFAULT_AVATAR}" style="width:52px; height:52px; border-radius:50%; object-fit:cover; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.1);">
                 <div style="min-width: 0; flex: 1;">
                     <h4 style="margin:0 0 6px; display:flex; align-items:center; justify-content:space-between; gap:6px; white-space: nowrap;">
                         <span style="overflow: hidden; text-overflow: ellipsis; flex: 1; font-size: 1.05rem;">
-                            ${chat.name} ${!chat.isClient ? '<span style="font-size:0.7em; background:rgba(59,130,246,0.2); color:#60a5fa; padding:2px 6px; border-radius:10px; margin-left:6px; vertical-align:middle;">Client</span>' : ''}
+                            ${chat.name} ${!chat.isClient ? '<span style="font-size:0.7em; background:rgba(59,130,246,0.2); color:#60a5fa; padding:2px 6px; border-radius:10px; margin-left:6px; vertical-align:middle;">Client</span>' : ''}${unreadDot}
                         </span>
                         <span class="text-xs text-secondary" style="flex-shrink: 0;">${new Date(chat.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                     </h4>
@@ -2684,8 +2743,57 @@ document.querySelectorAll('#reviewStars span').forEach(span => {
     });
 });
 
-document.getElementById('closeContactModal').addEventListener('click', () => { contactModal.style.display = 'none'; });
-document.getElementById('closeLoginPrompt').addEventListener('click', () => { loginPromptModal.style.display = 'none'; });
+document.getElementById('closeContactModal')?.addEventListener('click', () => { if(contactModal) contactModal.style.display = 'none'; });
+document.getElementById('closeLoginPrompt')?.addEventListener('click', () => { if(loginPromptModal) loginPromptModal.style.display = 'none'; });
+
+const hireRequestModal = document.getElementById('hireRequestModal');
+document.getElementById('closeHireRequestModal')?.addEventListener('click', () => { if(hireRequestModal) hireRequestModal.style.display = 'none'; });
+document.getElementById('cancelHireRequest')?.addEventListener('click', () => { if(hireRequestModal) hireRequestModal.style.display = 'none'; });
+
+const confirmHireRequest = document.getElementById('confirmHireRequest');
+if (confirmHireRequest) {
+    confirmHireRequest.addEventListener('click', async () => {
+        if (!currentUser || !window.currentHireProfileId) return;
+        
+        try {
+            confirmHireRequest.disabled = true;
+            confirmHireRequest.textContent = 'Sending...';
+            
+            const reqRef = push(ref(db, "requests"));
+            await set(reqRef, {
+                editorId: window.currentHireProfileId,
+                userId: currentUser.uid,
+                userEmail: currentUser.email || 'No email',
+                status: 'pending',
+                timestamp: Date.now()
+            });
+            
+            // Notification to editor
+            const notifRef = push(ref(db, "notifications/" + window.currentHireProfileId));
+            await set(notifRef, {
+                title: "New Job Request!",
+                message: `You have received a new project request from ${currentUser.email || 'a client'}.`,
+                type: "request",
+                timestamp: Date.now(),
+                read: false
+            });
+            
+            hireRequestModal.style.display = 'none';
+            alert("Request sent successfully! The editor will review it soon.");
+            
+            // Re-render editor profile if it's open, to update the button state
+            if(document.getElementById('editorProfileModal').style.display === 'flex') {
+                openEditorProfile(window.currentHireProfileId);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Failed to send request.');
+        } finally {
+            confirmHireRequest.disabled = false;
+            confirmHireRequest.textContent = 'Send Request';
+        }
+    });
+}
 
 // 3D Hover Effect
 document.addEventListener('mousemove', (e) => {
@@ -3764,6 +3872,54 @@ const sendEccMsgBtn = document.getElementById('sendEccMsgBtn');
 let currentEccPath = null;
 let eccListener = null;
 
+// Attachment Handling
+let eccAttachmentFile = null;
+const eccAttachBtn = document.getElementById('eccAttachBtn');
+const eccAttachInput = document.getElementById('eccAttachInput');
+const eccAttachmentPreview = document.getElementById('eccAttachmentPreview');
+const eccAttachedImage = document.getElementById('eccAttachedImage');
+const eccRemoveAttachmentBtn = document.getElementById('eccRemoveAttachmentBtn');
+
+if(eccAttachBtn && eccAttachInput) {
+    eccAttachBtn.addEventListener('click', () => eccAttachInput.click());
+    eccAttachInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        if(!file.type.startsWith('image/')) {
+            alert('Please select an image file.');
+            return;
+        }
+        eccAttachmentFile = file;
+        eccAttachedImage.src = URL.createObjectURL(file);
+        eccAttachmentPreview.style.display = 'block';
+    });
+}
+if(eccRemoveAttachmentBtn) {
+    eccRemoveAttachmentBtn.addEventListener('click', () => {
+        eccAttachmentFile = null;
+        eccAttachInput.value = '';
+        eccAttachmentPreview.style.display = 'none';
+        eccAttachedImage.src = '';
+    });
+}
+
+function openAnimatedModal(modal) {
+    if(!modal) return;
+    modal.style.display = 'flex';
+    setTimeout(() => {
+        modal.style.transform = 'translateX(0)';
+    }, 10);
+}
+
+function closeAnimatedModal(modal, callback) {
+    if(!modal) return;
+    modal.style.transform = 'translateX(100%)';
+    setTimeout(() => {
+        modal.style.display = 'none';
+        if (callback) callback();
+    }, 300);
+}
+
 if (contactInApp) {
     contactInApp.addEventListener('click', () => {
         if (!currentUser) {
@@ -3772,13 +3928,20 @@ if (contactInApp) {
         }
         if (!currentProfileId) return;
         document.getElementById('contactModal').style.display = 'none';
-        editorClientChatModal.style.display = 'flex';
+        
+        openAnimatedModal(editorClientChatModal);
         window.isInterceptingChat = false;
         
         currentEccPath = `editor_client_chats/${currentProfileId}_${currentUser.uid}/messages`;
         
         const ed = editors.find(e => e.id === currentProfileId);
-        document.getElementById('eccUserName').textContent = 'Chat with ' + (ed ? ed.name : 'Editor');
+        document.getElementById('eccUserName').innerHTML = `
+            <img src="${ed ? ed.photo_url || window.DEFAULT_AVATAR : window.DEFAULT_AVATAR}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.1);">
+            <div style="display:flex; flex-direction:column; line-height:1.2;">
+                <span>${ed ? ed.name : 'Editor'}</span>
+                <span style="font-size:0.75rem; color:var(--success); font-weight:normal;">Online</span>
+            </div>
+        `;
         
         if (eccListener) eccListener(); // Unsubscribe prev
         
@@ -3792,17 +3955,18 @@ if (contactInApp) {
 
 if (closeEccChat) {
     closeEccChat.addEventListener('click', () => {
-        editorClientChatModal.style.display = 'none';
-        window.isInterceptingChat = false;
-        if (eccListener) {
-            eccListener();
-            eccListener = null;
-        }
+        closeAnimatedModal(editorClientChatModal, () => {
+            window.isInterceptingChat = false;
+            if (eccListener) {
+                eccListener();
+                eccListener = null;
+            }
+        });
     });
 }
 
 window.openClientSideChat = (otherId, chatId, otherName, otherPhotoUrl) => {
-    editorClientChatModal.style.display = 'flex';
+    openAnimatedModal(editorClientChatModal);
     window.isInterceptingChat = false;
     currentEccPath = `editor_client_chats/${chatId}/messages`;
     
@@ -3836,18 +4000,65 @@ window.openClientSideChat = (otherId, chatId, otherName, otherPhotoUrl) => {
 if (sendEccMsgBtn && eccChatInput) {
     const sendEccMsg = async () => {
         const text = eccChatInput.value.trim();
-        if (!text || !currentEccPath || !currentUser) return;
+        const fileToUpload = eccAttachmentFile; // Capture any attached file
+        
+        if ((!text && !fileToUpload) || !currentEccPath || (!currentUser && !window.isInterceptingChat)) return;
+        
         eccChatInput.value = '';
+        if(eccRemoveAttachmentBtn) eccRemoveAttachmentBtn.click(); // Clear preview immediately
         
         try {
             const payload = {
                 senderId: window.isInterceptingChat ? 'admin' : currentUser.uid,
                 text: text,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                read: false
             };
             if (window.isInterceptingChat) {
                 payload.isAdmin = true;
             }
+            
+            if (fileToUpload) {
+                // Convert to Base64 using Canvas to compress and avoid Firebase Storage
+                const base64Url = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+                            const MAX_DIMENSION = 800; // max size to keep DB clean
+                            
+                            if (width > height) {
+                                if (width > MAX_DIMENSION) {
+                                    height *= MAX_DIMENSION / width;
+                                    width = MAX_DIMENSION;
+                                }
+                            } else {
+                                if (height > MAX_DIMENSION) {
+                                    width *= MAX_DIMENSION / height;
+                                    height = MAX_DIMENSION;
+                                }
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            // compress to 0.6 quality JPEG
+                            resolve(canvas.toDataURL('image/jpeg', 0.6));
+                        };
+                        img.onerror = reject;
+                        img.src = e.target.result;
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(fileToUpload);
+                });
+                
+                payload.imageUrl = base64Url;
+            }
+            
             await push(ref(db, currentEccPath), payload);
         } catch (e) {
             console.error("Chat error", e);
@@ -3861,6 +4072,17 @@ if (sendEccMsgBtn && eccChatInput) {
 
 function renderEccChat(messages) {
     if (!eccChatContainer) return;
+    
+    // Mark messages from the other person as read
+    if (currentUser && !window.isInterceptingChat && currentEccPath) {
+        messages.forEach(msg => {
+            if (msg.senderId !== currentUser.uid && !msg.read) {
+                // Update in DB
+                update(ref(db, `${currentEccPath}/${msg.id}`), { read: true });
+            }
+        });
+    }
+
     eccChatContainer.innerHTML = '';
     
     if (messages.length === 0) {
@@ -3896,10 +4118,16 @@ function renderEccChat(messages) {
             div.style.color = 'white';
         }
         
+        let mediaHtml = '';
+        if (msg.imageUrl) {
+            mediaHtml = `<img src="${msg.imageUrl}" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-bottom: ${msg.text ? '8px' : '0'}; cursor: pointer; object-fit: contain;" onclick="window.open('${msg.imageUrl}', '_blank')">`;
+        }
+
         div.innerHTML = `
             ${isAdminMsg && !isMe ? '<div style="font-size: 0.7rem; font-weight: bold; margin-bottom: 4px; color: #b8860b;">🛡️ Support Admin (Verified)</div>' : ''}
             ${isAdminMsg && isMe ? '<div style="font-size: 0.7rem; font-weight: bold; margin-bottom: 4px; color: #b8860b;">🛡️ Sent as Admin</div>' : ''}
-            <div style="font-size:0.95rem; font-weight: ${isAdminMsg ? '500' : 'normal'};">${msg.text}</div>
+            ${mediaHtml}
+            ${msg.text ? `<div style="font-size:0.95rem; font-weight: ${isAdminMsg ? '500' : 'normal'};">${msg.text.replace(/\n/g, '<br>')}</div>` : ''}
             <div style="font-size:0.7rem; color: ${isAdminMsg ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)'}; margin-top:5px; text-align: ${isMe ? 'right' : 'left'}">
                 ${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
             </div>
@@ -3930,7 +4158,7 @@ if (closeJobDashboard) {
 
 function renderJobDashboard() {
     if (!currentUser) return;
-    const myEditorProfile = editors.find(e => e.userId === currentUser.uid);
+    const myEditorProfile = editors.find(e => e.userId === currentUser.uid && !e.deletionScheduledAt);
     if (!myEditorProfile) return;
     
     // Find unique clients from requests
@@ -3965,7 +4193,7 @@ function renderJobDashboard() {
             const lastMsg = msgs.sort((a,b) => b.timestamp - a.timestamp)[0];
             lastTimestamp = lastMsg.timestamp;
             lastMsgText = lastMsg.text;
-            if (lastMsg.senderId !== currentUser.uid) {
+            if (lastMsg.senderId !== currentUser.uid && !lastMsg.read) {
                 unread = true;
             }
         }
@@ -4007,7 +4235,7 @@ function renderJobDashboard() {
         const isFav = allUsers[currentUser.uid]?.favoriteChats?.includes(client.chatKey);
         
         div.innerHTML = `
-            ${client.unread ? '<div style="position:absolute; top:10px; right:10px; background:var(--warning); width:12px; height:12px; border-radius:50%; box-shadow:0 0 8px var(--warning);"></div>' : ''}
+            ${client.unread ? '<div class="bounce-anim" style="position:absolute; top:10px; right:10px; background:var(--warning); width:12px; height:12px; border-radius:50%; box-shadow:0 0 8px var(--warning);"></div>' : ''}
             
             <div style="position:absolute; top:5px; left:5px; display:flex; gap:5px;">
                 <button class="btn fav-chat-btn-editor" style="background:transparent; border:none; color:var(--warning); cursor:pointer; padding:5px;" title="Favorite this client chat">

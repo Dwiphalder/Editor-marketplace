@@ -244,33 +244,77 @@ input:checked + .slider:before { transform: translateX(20px); }
 /* Bottom Nav */
 .bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
-    display: flex; justify-content: space-around; align-items: center;
-    background: rgba(15, 15, 25, 0.95);
-    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    display: flex; justify-content: space-between; align-items: stretch;
+    background: rgba(15, 15, 25, 0.85); /* Slightly more transparent */
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
     border-top: 1px solid rgba(255,255,255,0.05);
-    padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+    padding: 0 10px calc(0px + env(safe-area-inset-bottom, 0px));
+    height: 70px;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
 }
 .nav-indicator {
-    position: absolute;
-    top: 7px;
-    left: 10px;
-    height: 54px;
-    width: calc((100% - 20px) / 5);
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 16px;
-    z-index: -1;
-    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), width 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: none; /* Disable indicator since we have the distinct central button approach */
 }
 .bottom-nav .nav-item {
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
     text-decoration: none; color: var(--text-secondary); font-size: 0.7rem;
-    transition: color 0.3s; flex: 1; padding: 8px 0;
+    transition: color 0.3s, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); flex: 1;
     position: relative;
+    height: 100%;
 }
-.bottom-nav .nav-item.active { color: white; }
+.bottom-nav .nav-item.active:not(#bottomNavHome) { color: white; }
 .bottom-nav .nav-item svg { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.bottom-nav .nav-item.active svg { transform: translateY(-2px) scale(1.1); stroke: var(--primary); }
+.bottom-nav .nav-item.active:not(#bottomNavHome) svg { transform: translateY(-2px) scale(1.1); stroke: var(--primary); }
+
+#bottomNavHome {
+    flex: 1.2; /* slightly wider space for the big circle */
+    background: transparent;
+    z-index: 101;
+    position: relative;
+    justify-content: flex-end; /* Push text down */
+    padding-bottom: 8px; /* Room for text */
+}
+
+#bottomNavHome .home-circle-wrapper {
+    position: absolute;
+    top: -25px; /* Protrude upwards */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 65px;
+    height: 65px;
+    background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 4px solid #0f0f19; /* Create cutout look blending with dark background */
+}
+
+#bottomNavHome.active .home-circle-wrapper {
+    box-shadow: 0 10px 30px rgba(59, 130, 246, 0.6);
+    transform: translateX(-50%) translateY(-3px) scale(1.05);
+}
+
+#bottomNavHome svg {
+    color: white;
+    width: 28px;
+    height: 28px;
+    stroke-width: 2.5;
+}
+
+#bottomNavHome span {
+    font-weight: bold;
+    opacity: 0.8;
+}
+
+#bottomNavHome.active span {
+    opacity: 1;
+    color: white;
+}
 
 @keyframes slideLeftIn {
     0% { transform: translateX(30%); opacity: 0; }
@@ -617,6 +661,21 @@ input:checked + .slider:before { transform: translateX(20px); }
 
 .profile-section { margin-bottom: 2rem; }
 
+@keyframes pulseGreen {
+    0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
+    70% { box-shadow: 0 0 0 6px rgba(37, 211, 102, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+}
+
+@keyframes bounceAnim {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+.bounce-anim {
+    animation: bounceAnim 1.5s infinite ease-in-out, pulseGreen 2s infinite;
+}
+
 @keyframes badgeBlink {
     0% { transform: scale(1); filter: drop-shadow(0 0 2px currentColor); opacity: 1; }
     50% { transform: scale(1.2); filter: drop-shadow(0 0 12px currentColor); opacity: 0.4; }
@@ -865,6 +924,9 @@ input:checked + .slider:before { transform: translateX(20px); }
     text-align: center;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     pointer-events: none;
+}
+.custom-toast.toast-success {
+    background: rgba(37, 211, 102, 0.9);
 }
 .custom-toast.hidden { display: none; }
 
