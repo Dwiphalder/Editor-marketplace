@@ -26,7 +26,7 @@ window.DEFAULT_AVATAR = "data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://w
 
 // Handle redirect returns from standalone/mobile logins
 getRedirectResult(auth).then((result) => {
-    if (result && window.loginPromptModal) result.loginPromptModal.style.display = 'none';
+    if (result && window.loginPromptModal) window.closeModal(loginPromptModal);
 }).catch(err => console.error("Redirect login error:", err));
 
 const provider = new GoogleAuthProvider();
@@ -207,9 +207,73 @@ filterTabs.forEach(tab => {
     });
 });
 
+window.activeModalsStack = [];
+
+window.addEventListener('click', (e) => {
+    if (e.target.classList && e.target.classList.contains('modal-overlay')) {
+        // If it's the animated chat modal, close it specifically!
+        if (e.target.id === 'editorClientChatModal') {
+            closeAnimatedModal(e.target);
+            return;
+        }
+        
+        // Let image viewer close itself
+        if (e.target.id === 'imageViewerModal') {
+            return;
+        }
+
+        closeModal(e.target);
+    }
+});
+
+window.addEventListener('popstate', (e) => {
+    if (window._isClosingFromCode) {
+        window._isClosingFromCode = false;
+        return;
+    }
+    
+    if (window.activeModalsStack.length > 0) {
+        const topModalEntry = window.activeModalsStack.pop();
+        if (topModalEntry.type === 'normal') {
+            const modal = topModalEntry.modal;
+            document.body.style.overflow = window.activeModalsStack.length > 0 ? 'hidden' : '';
+            if(userSettings.animations) {
+                modal.style.animation = 'fadeOutModal 0.3s ease forwards';
+                const card = modal.querySelector('.modal-card');
+                if(card) {
+                    card.style.animation = 'zoomOutModal 0.3s ease forwards';
+                }
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                }, 280);
+            } else {
+                modal.style.display = 'none';
+            }
+        } else if (topModalEntry.type === 'animated') {
+            const modal = topModalEntry.modal;
+            document.body.style.overflow = window.activeModalsStack.length > 0 ? 'hidden' : '';
+            modal.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                modal.style.display = 'none';
+                if (topModalEntry.callback) topModalEntry.callback();
+            }, 300);
+        } else if (topModalEntry.type === 'imageViewer') {
+            const modal = topModalEntry.modal;
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+    }
+});
+
 window.openModal = function(modal) {
     if(!modal) return;
     document.body.style.overflow = 'hidden';
+    
+    window.activeModalsStack.push({ type: 'normal', modal: modal });
+    history.pushState({ modalOpen: true }, "");
+
     if(userSettings.animations && !userSettings.lowEnd) {
         modal.style.display = 'flex';
         modal.style.animation = 'fadeInModal 0.3s ease forwards';
@@ -224,7 +288,15 @@ window.openModal = function(modal) {
 
 window.closeModal = function(modal) {
     if(!modal) return;
-    document.body.style.overflow = '';
+    
+    const idx = window.activeModalsStack.findIndex(m => m.modal === modal);
+    if(idx > -1) {
+        window.activeModalsStack.splice(idx, 1);
+        window._isClosingFromCode = true;
+        history.back();
+    }
+    
+    document.body.style.overflow = window.activeModalsStack.length > 0 ? 'hidden' : '';
     if(userSettings.animations && !userSettings.lowEnd) {
         modal.style.animation = 'fadeOutModal 0.3s ease forwards';
         const card = modal.querySelector('.modal-card');
@@ -588,7 +660,7 @@ if(authForm) authForm.addEventListener('submit', async (e) => {
         } else {
             await createUserWithEmailAndPassword(auth, email, pass);
         }
-        loginPromptModal.style.display = 'none'; // in case it was opened from hiring
+        closeModal(loginPromptModal); // in case it was opened from hiring
     } catch(err) {
         console.error("Auth error:", err);
         let msg = err.message.replace('Firebase:', '').trim();
@@ -721,7 +793,7 @@ if(bottomNavMessages) {
     bottomNavMessages.addEventListener('click', (e) => {
         e.preventDefault();
         if (!currentUser) {
-            document.getElementById('loginPromptModal').style.display = 'flex';
+            openModal(document.getElementById('loginPromptModal'));
             return;
         }
         window.switchNavView('messages');
@@ -927,7 +999,7 @@ function handleGesture(e) {
             const nextView = navOrder[curIdx + 1];
             if ((nextView === 'messages' || nextView === 'profile' || nextView === 'jobs' || nextView === 'wishlist') && !currentUser) {
                 // Must be logged in to go here
-                document.getElementById('loginPromptModal').style.display = 'flex';
+                openModal(document.getElementById('loginPromptModal'));
                 return;
             }
             window.switchNavView(nextView);
@@ -938,7 +1010,7 @@ function handleGesture(e) {
         if (curIdx > 0) {
             const prevView = navOrder[curIdx - 1];
             if ((prevView === 'messages' || prevView === 'profile' || prevView === 'jobs' || prevView === 'wishlist') && !currentUser) {
-                document.getElementById('loginPromptModal').style.display = 'flex';
+                openModal(document.getElementById('loginPromptModal'));
                 return;
             }
             window.switchNavView(prevView);
@@ -1132,20 +1204,20 @@ function populateJobFormFromProfile() {
                     if (isAlreadyEditor) {
                         enterEditMode();
                     } else if (editResetWarningModal) {
-                        editResetWarningModal.style.display = 'flex';
+                        openModal(editResetWarningModal);
                     }
                 };
             }
 
             if (cancelEditWarningBtn) {
                 cancelEditWarningBtn.onclick = () => {
-                    if (editResetWarningModal) editResetWarningModal.style.display = 'none';
+                    if (editResetWarningModal) closeModal(editResetWarningModal);
                 };
             }
 
             if (confirmEditWarningBtn) {
                 confirmEditWarningBtn.onclick = () => {
-                    if (editResetWarningModal) editResetWarningModal.style.display = 'none';
+                    if (editResetWarningModal) closeModal(editResetWarningModal);
                     enterEditMode();
                 };
             }
@@ -1769,7 +1841,7 @@ document.addEventListener('click', (e) => {
             currentProfileId = selectedProfileId;
             const ed = editors.find(editor => editor.id === currentProfileId);
             if (!currentUser) {
-                loginPromptModal.style.display = 'flex';
+                openModal(loginPromptModal);
                 return;
             }
             if (ed) {
@@ -1798,7 +1870,7 @@ document.addEventListener('click', (e) => {
         
         if (selectedProfileId) {
             if (!currentUser) {
-                loginPromptModal.style.display = 'flex';
+                openModal(loginPromptModal);
                 return;
             }
             window.currentHireProfileId = selectedProfileId;
@@ -2002,7 +2074,7 @@ const wishlistSound = new Audio('https://assets.mixkit.co/active_storage/sfx/286
 
 document.getElementById('toggleWishlistBtn').addEventListener('click', async () => {
     if (!currentUser) {
-        loginPromptModal.style.display = 'flex';
+        openModal(loginPromptModal);
         return;
     }
     if (!currentProfileId) return;
@@ -2054,7 +2126,7 @@ document.getElementById('toggleWishlistBtn').addEventListener('click', async () 
 // Workflow: Send Request / Leave Review / Waitlist
 document.getElementById('contactEditorBtn').addEventListener('click', async () => {
     if (!currentUser) {
-        loginPromptModal.style.display = 'flex';
+        openModal(loginPromptModal);
         return;
     }
     
@@ -2076,7 +2148,7 @@ document.getElementById('contactEditorBtn').addEventListener('click', async () =
             // Check if already reviewed
             if (allReviews.find(r => r.editorId === ed.id && r.userId === currentUser.uid)) return;
             // Open review modal
-            document.getElementById('reviewModal').style.display = 'flex';
+            openModal(document.getElementById('reviewModal'));
         }
         return;
     }
@@ -2121,7 +2193,7 @@ document.getElementById('contactEditorBtn').addEventListener('click', async () =
 
 // Setup review modal close
 document.getElementById('closeReviewModal').addEventListener('click', () => {
-    document.getElementById('reviewModal').style.display = 'none';
+    closeModal(document.getElementById('reviewModal'));
 });
 
 // User Profile Logic
@@ -2174,7 +2246,7 @@ window.populateUserProfileData = function(showMustComplete = false) {
 
 window.openUserProfileView = function(showMustComplete = false) {
     if (!currentUser) {
-        loginPromptModal.style.display = 'flex';
+        openModal(loginPromptModal);
         return;
     }
     window.switchNavView('profile');
@@ -2292,7 +2364,7 @@ function renderClientChatsList(data) {
                 // Find Client
                 const cUser = typeof allUsers !== 'undefined' ? allUsers[otherPartyId] : null;
                 if (cUser) {
-                    name = (cUser.fname || '') + ' ' + (cUser.lname || '');
+                    name = (cUser.firstName || '') + ' ' + (cUser.lastName || '');
                     if (!name.trim()) name = cUser.name || cUser.email || 'Client';
                     photo_url = cUser.photoUrl || window.DEFAULT_AVATAR;
                 }
@@ -2724,7 +2796,7 @@ window.viewAdminRequests = function(editorId) {
         });
     }
     
-    document.getElementById('adminRequestsModal').style.display = 'flex';
+    openModal(document.getElementById('adminRequestsModal'));
 };
 
 window.updateAdminRequest = async function(reqId, newStatus) {
@@ -2742,7 +2814,7 @@ window.updateAdminRequest = async function(reqId, newStatus) {
         
         // Re-render the modal
         // Find which editor's requests we are viewing (just pick it from the request if we can)
-        document.getElementById('adminRequestsModal').style.display = 'none';
+        closeModal(document.getElementById('adminRequestsModal'));
         renderAdminList();
         alert('Request updated.');
         // No auto-re-open here, simplistic
@@ -2753,7 +2825,7 @@ window.updateAdminRequest = async function(reqId, newStatus) {
 };
 
 document.getElementById('closeAdminRequestsModal').addEventListener('click', () => {
-    document.getElementById('adminRequestsModal').style.display = 'none';
+    closeModal(document.getElementById('adminRequestsModal'));
 });
 
 // Submit review
@@ -2790,7 +2862,7 @@ document.getElementById('submitReviewBtn').addEventListener('click', async () =>
         
         // Optionally update editor rating
         
-        document.getElementById('reviewModal').style.display = 'none';
+        closeModal(document.getElementById('reviewModal'));
         btn.disabled = false;
         btn.textContent = 'Submit Review';
         document.getElementById('reviewText').value = '';
@@ -2823,12 +2895,12 @@ document.querySelectorAll('#reviewStars span').forEach(span => {
     });
 });
 
-document.getElementById('closeContactModal')?.addEventListener('click', () => { if(contactModal) contactModal.style.display = 'none'; });
-document.getElementById('closeLoginPrompt')?.addEventListener('click', () => { if(loginPromptModal) loginPromptModal.style.display = 'none'; });
+document.getElementById('closeContactModal')?.addEventListener('click', () => { if(contactModal) closeModal(contactModal); });
+document.getElementById('closeLoginPrompt')?.addEventListener('click', () => { if(loginPromptModal) closeModal(loginPromptModal); });
 
 const hireRequestModal = document.getElementById('hireRequestModal');
-document.getElementById('closeHireRequestModal')?.addEventListener('click', () => { if(hireRequestModal) hireRequestModal.style.display = 'none'; });
-document.getElementById('cancelHireRequest')?.addEventListener('click', () => { if(hireRequestModal) hireRequestModal.style.display = 'none'; });
+document.getElementById('closeHireRequestModal')?.addEventListener('click', () => { if(hireRequestModal) closeModal(hireRequestModal); });
+document.getElementById('cancelHireRequest')?.addEventListener('click', () => { if(hireRequestModal) closeModal(hireRequestModal); });
 
 const confirmHireRequest = document.getElementById('confirmHireRequest');
 if (confirmHireRequest) {
@@ -2858,7 +2930,7 @@ if (confirmHireRequest) {
                 read: false
             });
             
-            hireRequestModal.style.display = 'none';
+            closeModal(hireRequestModal);
             alert("Request sent successfully! The editor will review it soon.");
             
             // Re-render editor profile if it's open, to update the button state
@@ -2988,12 +3060,12 @@ if(appVersionTracker) appVersionTracker.addEventListener('click', () => {
     adminClickTimer = setTimeout(() => { adminClickCount = 0; }, 2000);
 });
 
-if(document.getElementById('closeAdminPin')) document.getElementById('closeAdminPin').addEventListener('click', () => { adminPinModal.style.display = 'none'; });
+if(document.getElementById('closeAdminPin')) document.getElementById('closeAdminPin').addEventListener('click', () => { closeModal(adminPinModal); });
 if(document.getElementById('verifyPinBtn')) document.getElementById('verifyPinBtn').addEventListener('click', () => {
     const pin = document.getElementById('adminPinInput').value;
     const pinErr = document.getElementById('adminPinError');
     if (pin === 'admin123') { // Hidden password
-        adminPinModal.style.display = 'none';
+        closeModal(adminPinModal);
         document.getElementById('adminPinInput').value = '';
         if(pinErr) pinErr.classList.add('hidden');
         openAdminPanel();
@@ -3236,12 +3308,12 @@ window.viewAdminUserProfile = function(uid) {
     document.getElementById('adminUpEmail').textContent = u.email || 'No email';
     document.getElementById('adminUpPhone').textContent = u.phone || 'No phone';
     document.getElementById('adminUpId').textContent = 'UID: ' + uid + ' (Short: ' + uid.substring(0,8).toUpperCase() + ')';
-    document.getElementById('adminUserProfileModal').style.display = 'flex';
+    openModal(document.getElementById('adminUserProfileModal'));
 };
 
 if (document.getElementById('closeAdminUserProfile')) {
     document.getElementById('closeAdminUserProfile').addEventListener('click', () => {
-        document.getElementById('adminUserProfileModal').style.display = 'none';
+        closeModal(document.getElementById('adminUserProfileModal'));
     });
 }
 
@@ -3346,7 +3418,7 @@ if(document.getElementById('addNewEditorBtn')) document.getElementById('addNewEd
     document.getElementById('editorFormTitle').textContent = 'Add New Editor';
     document.getElementById('editEditorId').value = '';
     clearEditorForm();
-    editorFormModal.style.display = 'flex';
+    openModal(editorFormModal);
 });
 
 function clearEditorForm() {
@@ -3373,8 +3445,8 @@ function clearEditorForm() {
     document.getElementById('edBannerPreview').style.display = 'none';
 }
 
-if(document.getElementById('closeEditorForm')) document.getElementById('closeEditorForm').addEventListener('click', () => { editorFormModal.style.display = 'none'; });
-if(document.getElementById('closeEditorFormBtn')) document.getElementById('closeEditorFormBtn').addEventListener('click', () => { editorFormModal.style.display = 'none'; });
+if(document.getElementById('closeEditorForm')) document.getElementById('closeEditorForm').addEventListener('click', () => { closeModal(editorFormModal); });
+if(document.getElementById('closeEditorFormBtn')) document.getElementById('closeEditorFormBtn').addEventListener('click', () => { closeModal(editorFormModal); });
 
 window.viewEditJobApp = (appId) => {
     const app = allApplications.find(a => a.id === appId);
@@ -3412,7 +3484,7 @@ window.viewEditJobApp = (appId) => {
     document.getElementById('edIsFeatured').checked = false;
     document.getElementById('edVerificationType').value = 'blue'; // Apps usually become verified automatically
     
-    editorFormModal.style.display = 'flex';
+    openModal(editorFormModal);
 };
 
 // Edit Exposing Globally for inline onclick
@@ -3457,7 +3529,7 @@ window.editAdminEditor = (id) => {
         document.getElementById('edBannerPreview').style.display = 'block';
     }
     
-    editorFormModal.style.display = 'flex';
+    openModal(editorFormModal);
 };
 
 window.deleteAdminEditor = async (id) => {
@@ -3511,17 +3583,17 @@ window.manageFeaturedEditor = (editorId = null) => {
         });
     }
 
-    document.getElementById('featuredManagerModal').style.display = 'flex';
+    openModal(document.getElementById('featuredManagerModal'));
 };
 
 if (document.getElementById('assignFeaturedBtn')) {
     document.getElementById('assignFeaturedBtn').addEventListener('click', () => window.manageFeaturedEditor());
 }
 if (document.getElementById('closeFeaturedManager')) {
-    document.getElementById('closeFeaturedManager').addEventListener('click', () => document.getElementById('featuredManagerModal').style.display = 'none');
+    document.getElementById('closeFeaturedManager').addEventListener('click', () => closeModal(document.getElementById('featuredManagerModal')));
 }
 if (document.getElementById('cancelFeaturedManager')) {
-    document.getElementById('cancelFeaturedManager').addEventListener('click', (e) => { e.preventDefault(); document.getElementById('featuredManagerModal').style.display = 'none'; });
+    document.getElementById('cancelFeaturedManager').addEventListener('click', (e) => { e.preventDefault(); closeModal(document.getElementById('featuredManagerModal')); });
 }
 
 if (document.getElementById('saveFeaturedBtn')) {
@@ -3556,7 +3628,7 @@ if (document.getElementById('saveFeaturedBtn')) {
 
         try {
             await update(ref(db, "editors/" + editorId), payload);
-            document.getElementById('featuredManagerModal').style.display = 'none';
+            closeModal(document.getElementById('featuredManagerModal'));
             fetchEditors();
             alert('Featured status applied.');
         } catch(err) {
@@ -3581,7 +3653,7 @@ if (document.getElementById('revokeFeaturedBtn')) {
                     isBestEditor: false,
                     bestExpiry: null
                 });
-                document.getElementById('featuredManagerModal').style.display = 'none';
+                closeModal(document.getElementById('featuredManagerModal'));
                 fetchEditors();
             } catch(err) {
                 console.error(err);
@@ -3656,7 +3728,7 @@ if(document.getElementById('saveEditorBtn')) document.getElementById('saveEditor
             payload.created_at = new Date().toISOString();
             await push(ref(db, "editors"), payload);
         }
-        editorFormModal.style.display = 'none';
+        closeModal(editorFormModal);
         fetchEditors();
     } catch(err) {
         console.error("Save error:", err);
@@ -3875,7 +3947,7 @@ if(submitJobReqBtn) {
                 const successOverlay = document.getElementById('successProfileModal');
                 if (successOverlay) {
                     successOverlay.querySelector('h2').textContent = 'Profile Updated!';
-                    successOverlay.style.display = 'flex';
+                    openModal(successOverlay);
                     playSuccessSound();
                     
                     await new Promise(r => setTimeout(r, 2000));
@@ -3901,7 +3973,7 @@ if(submitJobReqBtn) {
                 const successOverlay = document.getElementById('successProfileModal');
                 if (successOverlay) {
                     successOverlay.querySelector('h2').textContent = 'Profile Created!';
-                    successOverlay.style.display = 'flex';
+                    openModal(successOverlay);
                     playSuccessSound();
                     
                     // Wait 2.5 seconds, then hide and show profile
@@ -3986,6 +4058,10 @@ if(eccRemoveAttachmentBtn) {
 function openAnimatedModal(modal) {
     if(!modal) return;
     document.body.style.overflow = 'hidden';
+    
+    window.activeModalsStack.push({ type: 'animated', modal: modal });
+    history.pushState({ modalOpen: true }, "");
+
     modal.style.display = 'flex';
     setTimeout(() => {
         modal.style.transform = 'translateX(0)';
@@ -3994,7 +4070,15 @@ function openAnimatedModal(modal) {
 
 function closeAnimatedModal(modal, callback) {
     if(!modal) return;
-    document.body.style.overflow = '';
+    
+    const idx = window.activeModalsStack.findIndex(m => m.modal === modal);
+    if(idx > -1) {
+        window.activeModalsStack.splice(idx, 1);
+        window._isClosingFromCode = true;
+        history.back();
+    }
+    
+    document.body.style.overflow = window.activeModalsStack.length > 0 ? 'hidden' : '';
     modal.style.transform = 'translateX(100%)';
     setTimeout(() => {
         modal.style.display = 'none';
@@ -4005,7 +4089,7 @@ function closeAnimatedModal(modal, callback) {
 if (contactInApp) {
     contactInApp.addEventListener('click', () => {
         if (!currentUser) {
-            loginPromptModal.style.display = 'flex';
+            openModal(loginPromptModal);
             return;
         }
         if (!currentProfileId) return;
@@ -4065,6 +4149,9 @@ window.openImageViewer = function(url) {
     const modal = document.getElementById('imageViewerModal');
     const img = document.getElementById('imageViewerImg');
     if (modal && img) {
+        window.activeModalsStack.push({ type: 'imageViewer', modal: modal });
+        history.pushState({ modalOpen: true }, "");
+
         img.src = url;
         modal.style.display = 'flex';
         setTimeout(() => {
@@ -4078,6 +4165,13 @@ if (closeImageViewer) {
     const closeViewer = () => {
         const modal = document.getElementById('imageViewerModal');
         if (modal) {
+            const idx = window.activeModalsStack.findIndex(m => m.modal === modal);
+            if(idx > -1) {
+                window.activeModalsStack.splice(idx, 1);
+                window._isClosingFromCode = true;
+                history.back();
+            }
+
             modal.style.opacity = '0';
             setTimeout(() => {
                 modal.style.display = 'none';
@@ -4302,7 +4396,7 @@ if (openJobProfileBtn) {
 
 if (closeJobDashboard) {
     closeJobDashboard.addEventListener('click', () => {
-        jobDashboardModal.style.display = 'none';
+        closeModal(jobDashboardModal);
     });
 }
 
@@ -4442,7 +4536,9 @@ function renderJobDashboard() {
         
         div.querySelector('.msg-client-btn').addEventListener('click', () => {
             closeModal(jobDashboardModal);
-            window.openClientSideChat(client.clientId, client.chatKey, name, photo);
+            setTimeout(() => {
+                window.openClientSideChat(client.clientId, client.chatKey, name, photo);
+            }, 100);
         });
         
         jobDashboardClientsList.appendChild(div);
@@ -4471,7 +4567,7 @@ let currentSupportListener = null;
 if (supportBtn) {
     supportBtn.addEventListener('click', () => {
         if (!currentUser) return;
-        supportChatModal.style.display = 'flex';
+        openModal(supportChatModal);
         renderUserSupportChat();
         if (allSupportChats[currentUser.uid] && allSupportChats[currentUser.uid].unreadUser > 0) {
             update(ref(db, `support_chats/${currentUser.uid}`), { unreadUser: 0 });
@@ -4512,7 +4608,7 @@ function listenToUserSupportChats() {
 
 if (closeSupportChatBtn) {
     closeSupportChatBtn.addEventListener('click', () => {
-        supportChatModal.style.display = 'none';
+        closeModal(supportChatModal);
     });
 }
 
@@ -4601,14 +4697,14 @@ let globalAdminSupportListener = null;
 
 if (adminSupportChatsBtn) {
     adminSupportChatsBtn.addEventListener('click', () => {
-        adminSupportChatsModal.style.display = 'flex';
+        openModal(adminSupportChatsModal);
         renderAdminSupportUsersList();
     });
 }
 
 if (closeAdminSupportChatsBtn) {
     closeAdminSupportChatsBtn.addEventListener('click', () => {
-        adminSupportChatsModal.style.display = 'none';
+        closeModal(adminSupportChatsModal);
         adminActiveSupportUserId = null;
         renderAdminActiveChat([]);
         adminSupportChatHeader.style.display = 'none';
@@ -4725,7 +4821,7 @@ function renderAdminInterceptedChats() {
         let cUser = typeof allUsers !== 'undefined' ? allUsers[clientId] : null;
         let cliName = clientId;
         if(cUser) {
-            cliName = (cUser.fname || '') + ' ' + (cUser.lname || '');
+            cliName = (cUser.firstName || '') + ' ' + (cUser.lastName || '');
             if (!cliName.trim()) cliName = cUser.name || cUser.email || clientId;
         }
         
@@ -4978,11 +5074,11 @@ if (document.getElementById('addNewAdminBtn')) {
         document.getElementById('newAdminEmail').value = '';
         document.getElementById('newAdminPassword').value = '';
         window.foundAdminCandidate = null;
-        addAdminManagerModal.style.display = 'flex';
+        openModal(addAdminManagerModal);
     });
 }
 if (document.getElementById('closeAddAdminManager')) {
-    document.getElementById('closeAddAdminManager').addEventListener('click', () => { addAdminManagerModal.style.display = 'none'; });
+    document.getElementById('closeAddAdminManager').addEventListener('click', () => { closeModal(addAdminManagerModal); });
 }
 
 if (document.getElementById('adminSearchBtn')) {
@@ -5030,7 +5126,7 @@ if (document.getElementById('confirmAddAdminBtn')) {
                 isDisabled: false
             });
             alert("Admin access granted to " + window.foundAdminCandidate.name);
-            addAdminManagerModal.style.display = 'none';
+            closeModal(addAdminManagerModal);
             fetchAdmins();
         } catch(err) {
             console.error(err);
@@ -5064,7 +5160,7 @@ if (document.getElementById('createNewAdminBtn')) {
                 isDisabled: false
             });
             alert("Admin created successfully. They can now log in using the email and password.");
-            addAdminManagerModal.style.display = 'none';
+            closeModal(addAdminManagerModal);
             document.getElementById('newAdminEmail').value = '';
             document.getElementById('newAdminPassword').value = '';
             fetchAdmins();
@@ -5080,7 +5176,7 @@ if (document.getElementById('createNewAdminBtn')) {
                         isDisabled: false
                     });
                     alert("User already existed. They have now been granted admin privileges! (Password unchanged)");
-                    addAdminManagerModal.style.display = 'none';
+                    closeModal(addAdminManagerModal);
                     document.getElementById('newAdminEmail').value = '';
                     document.getElementById('newAdminPassword').value = '';
                     fetchAdmins();
@@ -5447,14 +5543,14 @@ if (aiSupportFab) {
 
     aiSupportFab.addEventListener('click', (e) => {
         if (!isDragging) {
-            aiSupportChatModal.style.display = 'flex';
+            openModal(aiSupportChatModal);
         }
     });
 }
 
 if (closeAiSupportChat) {
     closeAiSupportChat.addEventListener('click', () => {
-        aiSupportChatModal.style.display = 'none';
+        closeModal(aiSupportChatModal);
     });
 }
 
