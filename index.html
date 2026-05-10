@@ -738,7 +738,7 @@
     <div class="modal-overlay" id="editorClientChatModal" style="display: none; z-index: 20000; background: var(--bg-color); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); transform: translateX(100%); flex-direction: column; padding: 0; align-items: stretch; justify-content: flex-start; width: 100%; height: 100%; position: fixed; top: 0; left: 0;">
         <!-- Header -->
         <div style="background: rgba(30, 30, 40, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.05); padding: 10px 15px; display: flex; align-items: center; gap: 15px; z-index: 10;">
-            <button id="closeEccChat" class="btn" style="background: transparent; color: white; padding: 5px; border: none; box-shadow: none;">
+            <button id="closeEccChat" class="btn hover-pop" style="background: transparent; color: white; padding: 5px; border: none; box-shadow: none;">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             </button>
             <div id="eccUserName" style="flex: 1; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -1039,23 +1039,17 @@
                     </select>
                 </div>
                 <div class="form-group mt-3" style="display:flex; justify-content:space-between; align-items:center;">
-                    <label style="margin:0;">3D & Parallax Animations</label>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="prefAnimations" checked>
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-                <div class="form-group mt-3" style="display:flex; justify-content:space-between; align-items:center;">
-                    <label style="margin:0;">Low-End Device Mode<br><span style="font-size:0.75rem; color:var(--secondary); font-weight:normal;">Disables effects and shadows to optimize performance</span></label>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="prefLowEnd">
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-                <div class="form-group mt-3" style="display:flex; justify-content:space-between; align-items:center;">
                     <label style="margin:0;">Tick-Tock Sound Effects</label>
                     <label class="toggle-switch">
                         <input type="checkbox" id="prefSounds" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                
+                <div class="form-group mt-3" style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="margin:0;">Hide Online Status<br><span style="font-size:0.75rem; color:var(--secondary); font-weight:normal;">Hide your online state from others</span></label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="prefHideOnline">
                         <span class="slider round"></span>
                     </label>
                 </div>
@@ -1718,6 +1712,12 @@
                 <button class="btn primary" id="sendAiSupportMessageBtn">Send</button>
             </div>
         </div>
+    </div>
+
+    <!-- Image Viewer Modal -->
+    <div class="modal-overlay" id="imageViewerModal" style="display: none; z-index: 50000; background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;">
+        <span class="close hover-pop" id="closeImageViewer" style="position: absolute; top: 20px; right: 30px; font-size: 40px; color: white; cursor: pointer; z-index: 50001; text-shadow: 0 0 10px rgba(0,0,0,0.5);">&times;</span>
+        <img id="imageViewerImg" src="" style="max-width: 95vw; max-height: 85vh; object-fit: contain; border-radius: 8px; box-shadow: 0 0 30px rgba(0,0,0,0.5); transition: transform 0.2s ease;">
     </div>
 
     <!-- Scripts -->

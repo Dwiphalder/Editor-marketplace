@@ -207,6 +207,10 @@ input:checked + .slider:before { transform: translateX(20px); }
     backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--glass-border);
     height: var(--nav-height);
+    transition: transform 0.3s ease;
+}
+.navbar.nav-hidden {
+    transform: translateY(-100%);
 }
 .nav-container {
     max-width: 1200px; margin: 0 auto; padding: 0 1rem;
@@ -623,7 +627,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 
 .modal-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; }
 .modal-header .close { font-size: 1.5rem; cursor: pointer; line-height: 1; color: var(--text-secondary); }
-.modal-body { padding: 1.5rem; overflow-y: auto; }
+.modal-body { padding: 1.5rem; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--glass-border); display: flex; justify-content: flex-end; gap: 10px; }
 
 /* Form Styles */

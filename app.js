@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-import { getDatabase, ref, get, push, set, update, remove, onValue } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+import { getDatabase, ref, get, push, set, update, remove, onValue, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, RecaptchaVerifier, signInWithPhoneNumber, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { GoogleGenAI } from "@google/genai";
@@ -38,7 +38,8 @@ let userSettings = JSON.parse(localStorage.getItem('lumina_settings')) || {
     font: 'sanfrancisco',
     animations: true,
     sounds: true,
-    lowEnd: false
+    lowEnd: false,
+    hideOnline: false
 };
 applySettings();
 
@@ -82,9 +83,8 @@ function applySettings() {
     if (document.getElementById('prefTheme')) {
         document.getElementById('prefTheme').value = userSettings.theme;
         document.getElementById('prefFont').value = userSettings.font || 'sanfrancisco';
-        document.getElementById('prefAnimations').checked = userSettings.animations;
-        document.getElementById('prefLowEnd').checked = userSettings.lowEnd;
         document.getElementById('prefSounds').checked = userSettings.sounds;
+        document.getElementById('prefHideOnline').checked = userSettings.hideOnline;
         // Set accent active states
         document.querySelectorAll('.color-btn').forEach(btn => {
             if(btn.dataset.color === userSettings.accent) btn.classList.add('active');
@@ -134,6 +134,7 @@ let editors = [];
 let allRequests = [];
 let allReviews = [];
 let allUsers = {};
+let allStatuses = {};
 let allApplications = [];
 let allSupportChats = {};
 let currentUser = null;
@@ -208,6 +209,7 @@ filterTabs.forEach(tab => {
 
 window.openModal = function(modal) {
     if(!modal) return;
+    document.body.style.overflow = 'hidden';
     if(userSettings.animations && !userSettings.lowEnd) {
         modal.style.display = 'flex';
         modal.style.animation = 'fadeInModal 0.3s ease forwards';
@@ -222,6 +224,7 @@ window.openModal = function(modal) {
 
 window.closeModal = function(modal) {
     if(!modal) return;
+    document.body.style.overflow = '';
     if(userSettings.animations && !userSettings.lowEnd) {
         modal.style.animation = 'fadeOutModal 0.3s ease forwards';
         const card = modal.querySelector('.modal-card');
@@ -246,11 +249,64 @@ const loginPromptModal = document.getElementById('loginPromptModal');
 // Init
 window.addEventListener('DOMContentLoaded', () => {
     fetchEditors();
+    onValue(ref(db, 'status'), (snap) => {
+        allStatuses = snap.val() || {};
+        if (typeof renderClientChatsList === 'function' && window.globalClientChatsData) {
+            renderClientChatsList(window.globalClientChatsData);
+        }
+        if (currentProfileId) {
+            openProfile(currentProfileId);
+        }
+    });
+
+    // Navbar scroll behavior
+    let lastScrollY = window.scrollY;
+    const navbar = document.querySelector('.navbar');
+    window.addEventListener('scroll', () => {
+        if (!navbar) return;
+        const currentScrollY = window.scrollY;
+        // Don't trigger at the very top
+        if (currentScrollY < 50) {
+            navbar.classList.remove('nav-hidden');
+        } else if (currentScrollY > lastScrollY) {
+            // Scrolling down
+            navbar.classList.add('nav-hidden');
+        } else {
+            // Scrolling up
+            navbar.classList.remove('nav-hidden');
+        }
+        lastScrollY = currentScrollY;
+    });
 });
 
 let isInitialAuthCheck = true;
 const appStartTime = Date.now();
 const MINIMUM_SPLASH_TIME = 3500;
+
+window.updateOnlineStatus = function(forceUpdate = false) {
+    if (!currentUser) return;
+    const myStatusRef = ref(db, `status/${currentUser.uid}`);
+    if (userSettings.hideOnline) {
+        set(myStatusRef, { state: 'offline', last_changed: serverTimestamp() });
+        onDisconnect(myStatusRef).cancel();
+    } else {
+        const connectedRef = ref(db, '.info/connected');
+        if (forceUpdate) {
+            set(myStatusRef, { state: 'online', last_changed: serverTimestamp() });
+            onDisconnect(myStatusRef).set({ state: 'offline', last_changed: serverTimestamp() });
+        }
+    }
+};
+
+const connectedRef = ref(db, '.info/connected');
+onValue(connectedRef, (snap) => {
+    if (snap.val() === true && currentUser && !userSettings.hideOnline) {
+        const myStatusRef = ref(db, `status/${currentUser.uid}`);
+        onDisconnect(myStatusRef).set({ state: 'offline', last_changed: serverTimestamp() }).then(() => {
+            set(myStatusRef, { state: 'online', last_changed: serverTimestamp() });
+        });
+    }
+});
 
 // Authentication AuthState
 onAuthStateChanged(auth, async (user) => {
@@ -263,6 +319,7 @@ onAuthStateChanged(auth, async (user) => {
     const processAuthState = async () => {
         if (user) {
             currentUser = user;
+            updateOnlineStatus(true);
             
             window.currentUserIsAdmin = false;
             try {
@@ -2222,12 +2279,14 @@ function renderClientChatsList(data) {
             let name = 'Unknown User';
             let photo_url = window.DEFAULT_AVATAR;
             
+            let otherPartyUid = otherPartyId;
             if (isClient) {
                 // Find Editor
                 const ed = typeof editors !== 'undefined' ? editors.find(e => e.id === otherPartyId) : null;
                 if (ed) {
                     name = ed.name || 'Editor';
                     photo_url = ed.photo_url || window.DEFAULT_AVATAR;
+                    otherPartyUid = ed.userId || otherPartyId;
                 }
             } else {
                 // Find Client
@@ -2235,7 +2294,7 @@ function renderClientChatsList(data) {
                 if (cUser) {
                     name = (cUser.fname || '') + ' ' + (cUser.lname || '');
                     if (!name.trim()) name = cUser.name || cUser.email || 'Client';
-                    photo_url = cUser.avatarUrl || window.DEFAULT_AVATAR;
+                    photo_url = cUser.photoUrl || window.DEFAULT_AVATAR;
                 }
             }
             
@@ -2244,6 +2303,7 @@ function renderClientChatsList(data) {
                 myChats.push({
                     chatId: key,
                     otherPartyId: otherPartyId,
+                    otherPartyUid: otherPartyUid,
                     isClient: isClient,
                     name: name,
                     photo_url: photo_url,
@@ -2291,6 +2351,20 @@ function renderChatsToDOM() {
     filtered.forEach(chat => {
         const isFav = favChats.includes(chat.chatId);
         
+        const otherStatus = allStatuses && allStatuses[chat.otherPartyUid] ? allStatuses[chat.otherPartyUid] : {state: 'offline'};
+        const isOnline = otherStatus.state === 'online';
+        
+        let lastSeenText = '';
+        if (isOnline) {
+            lastSeenText = '<span style="color:#25d366; font-size: 0.8em; margin-left:8px;">Online</span>';
+        } else if (otherStatus.last_changed) {
+            const minAgo = Math.floor((Date.now() - otherStatus.last_changed) / 60000);
+            if (minAgo < 1) lastSeenText = '<span style="color:var(--text-secondary); font-size: 0.8em; margin-left:8px;">Just now</span>';
+            else if (minAgo < 60) lastSeenText = `<span style="color:var(--text-secondary); font-size: 0.8em; margin-left:8px;">${minAgo}m ago</span>`;
+            else if (minAgo < 1440) lastSeenText = `<span style="color:var(--text-secondary); font-size: 0.8em; margin-left:8px;">${Math.floor(minAgo/60)}h ago</span>`;
+            else lastSeenText = `<span style="color:var(--text-secondary); font-size: 0.8em; margin-left:8px;">${Math.floor(minAgo/1440)}d ago</span>`;
+        }
+
         const div = document.createElement('div');
         div.className = 'glass-card p-3';
         div.style.display = 'flex';
@@ -2307,13 +2381,19 @@ function renderChatsToDOM() {
         
         div.innerHTML = `
             <div style="display:flex; align-items:center; gap:12px; flex: 1; overflow: hidden;">
-                <img src="${chat.photo_url || window.DEFAULT_AVATAR}" style="width:52px; height:52px; border-radius:50%; object-fit:cover; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.1);">
+                <div style="position:relative; flex-shrink:0;">
+                    <img src="${chat.photo_url || window.DEFAULT_AVATAR}" onclick="event.stopPropagation(); window.openImageViewer(this.src)" style="width:52px; height:52px; border-radius:50%; object-fit:cover; border: 2px solid rgba(255,255,255,0.1); cursor:pointer;">
+                    ${isOnline ? '<div style="position:absolute; bottom:2px; right:2px; width:12px; height:12px; background:#25d366; border-radius:50%; border:2px solid var(--bg-color);"></div>' : ''}
+                </div>
                 <div style="min-width: 0; flex: 1;">
                     <h4 style="margin:0 0 6px; display:flex; align-items:center; justify-content:space-between; gap:6px; white-space: nowrap;">
-                        <span style="overflow: hidden; text-overflow: ellipsis; flex: 1; font-size: 1.05rem;">
+                        <span style="overflow: hidden; text-overflow: ellipsis; flex: 1; font-size: 1.05rem; display:flex; align-items:center;">
                             ${chat.name} ${!chat.isClient ? '<span style="font-size:0.7em; background:rgba(59,130,246,0.2); color:#60a5fa; padding:2px 6px; border-radius:10px; margin-left:6px; vertical-align:middle;">Client</span>' : ''}${unreadDot}
                         </span>
-                        <span class="text-xs text-secondary" style="flex-shrink: 0;">${new Date(chat.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                        <span class="text-xs text-secondary" style="flex-shrink: 0; display:flex; flex-direction:column; align-items:flex-end;">
+                            <span>${new Date(chat.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            ${lastSeenText}
+                        </span>
                     </h4>
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <p style="margin:0; font-size:0.9rem; color:var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex:1;">
@@ -2882,12 +2962,12 @@ document.querySelectorAll('.color-btn').forEach(btn => {
 if(document.getElementById('saveSettingsBtn')) document.getElementById('saveSettingsBtn').addEventListener('click', () => {
     userSettings.theme = document.getElementById('prefTheme').value;
     userSettings.font = document.getElementById('prefFont').value;
-    userSettings.animations = document.getElementById('prefAnimations').checked;
     userSettings.sounds = document.getElementById('prefSounds').checked;
-    userSettings.lowEnd = document.getElementById('prefLowEnd').checked;
+    userSettings.hideOnline = document.getElementById('prefHideOnline').checked;
     
     localStorage.setItem('lumina_settings', JSON.stringify(userSettings));
     applySettings();
+    updateOnlineStatus(true); // Manually trigger status update
     closeModal(settingsModal);
 });
 
@@ -3905,6 +3985,7 @@ if(eccRemoveAttachmentBtn) {
 
 function openAnimatedModal(modal) {
     if(!modal) return;
+    document.body.style.overflow = 'hidden';
     modal.style.display = 'flex';
     setTimeout(() => {
         modal.style.transform = 'translateX(0)';
@@ -3913,6 +3994,7 @@ function openAnimatedModal(modal) {
 
 function closeAnimatedModal(modal, callback) {
     if(!modal) return;
+    document.body.style.overflow = '';
     modal.style.transform = 'translateX(100%)';
     setTimeout(() => {
         modal.style.display = 'none';
@@ -3935,11 +4017,25 @@ if (contactInApp) {
         currentEccPath = `editor_client_chats/${currentProfileId}_${currentUser.uid}/messages`;
         
         const ed = editors.find(e => e.id === currentProfileId);
+        let onlineText = '<span style="font-size:0.75rem; color:var(--text-secondary); font-weight:normal;">Offline</span>';
+        if (ed && ed.userId) {
+            const st = allStatuses[ed.userId] || {};
+            if (st.state === 'online') {
+                onlineText = '<span style="font-size:0.75rem; color:var(--success); font-weight:normal;">Online</span>';
+            } else if (st.last_changed) {
+                const minAgo = Math.floor((Date.now() - st.last_changed) / 60000);
+                if (minAgo < 1) onlineText = '<span style="font-size:0.75rem; color:var(--text-secondary); font-weight:normal;">Last seen: Just now</span>';
+                else if (minAgo < 60) onlineText = `<span style="font-size:0.75rem; color:var(--text-secondary); font-weight:normal;">Last seen: ${minAgo}m ago</span>`;
+                else if (minAgo < 1440) onlineText = `<span style="font-size:0.75rem; color:var(--text-secondary); font-weight:normal;">Last seen: ${Math.floor(minAgo/60)}h ago</span>`;
+                else onlineText = `<span style="font-size:0.75rem; color:var(--text-secondary); font-weight:normal;">Last seen: ${Math.floor(minAgo/1440)}d ago</span>`;
+            }
+        }
+        
         document.getElementById('eccUserName').innerHTML = `
-            <img src="${ed ? ed.photo_url || window.DEFAULT_AVATAR : window.DEFAULT_AVATAR}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.1);">
+            <img src="${ed ? ed.photo_url || window.DEFAULT_AVATAR : window.DEFAULT_AVATAR}" onclick="event.stopPropagation(); window.openImageViewer(this.src)" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.1);cursor:pointer;">
             <div style="display:flex; flex-direction:column; line-height:1.2;">
                 <span>${ed ? ed.name : 'Editor'}</span>
-                <span style="font-size:0.75rem; color:var(--success); font-weight:normal;">Online</span>
+                ${onlineText}
             </div>
         `;
         
@@ -3965,6 +4061,42 @@ if (closeEccChat) {
     });
 }
 
+window.openImageViewer = function(url) {
+    const modal = document.getElementById('imageViewerModal');
+    const img = document.getElementById('imageViewerImg');
+    if (modal && img) {
+        img.src = url;
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            modal.style.opacity = '1';
+        }, 10);
+    }
+};
+
+const closeImageViewer = document.getElementById('closeImageViewer');
+if (closeImageViewer) {
+    const closeViewer = () => {
+        const modal = document.getElementById('imageViewerModal');
+        if (modal) {
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+    };
+
+    closeImageViewer.addEventListener('click', closeViewer);
+    
+    const imageViewerModal = document.getElementById('imageViewerModal');
+    if (imageViewerModal) {
+        imageViewerModal.addEventListener('click', (e) => {
+            if (e.target === imageViewerModal) {
+                closeViewer();
+            }
+        });
+    }
+}
+
 window.openClientSideChat = (otherId, chatId, otherName, otherPhotoUrl) => {
     openAnimatedModal(editorClientChatModal);
     window.isInterceptingChat = false;
@@ -3972,19 +4104,37 @@ window.openClientSideChat = (otherId, chatId, otherName, otherPhotoUrl) => {
     
     // Attempt fallback lookup if photoUrl not provided
     let photoUrl = otherPhotoUrl;
-    if (!photoUrl) {
+    let otherUid = otherId;
+    if (!otherPhotoUrl) {
         const ed = editors.find(e => e.id === otherId);
         const cUser = allUsers[otherId];
-        if (ed && ed.photo_url) photoUrl = ed.photo_url;
-        else if (cUser && cUser.avatarUrl) photoUrl = cUser.avatarUrl;
+        if (ed && ed.photo_url) { photoUrl = ed.photo_url; otherUid = ed.userId; }
+        else if (cUser && cUser.photoUrl) { photoUrl = cUser.photoUrl; otherUid = otherId; }
         else photoUrl = window.DEFAULT_AVATAR;
+    } else {
+        // Find if they are an editor
+        const ed = editors.find(e => e.id === otherId);
+        if (ed) otherUid = ed.userId;
+    }
+    
+    let onlineText = '<div style="font-size:0.75rem; color:var(--text-secondary); font-weight:normal; line-height:1;">Offline</div>';
+    const st = allStatuses[otherUid] || {};
+    if (st.state === 'online') {
+        onlineText = '<div style="font-size:0.75rem; color:var(--success); font-weight:normal; line-height:1;">Online</div>';
+    } else if (st.last_changed) {
+        const minAgo = Math.floor((Date.now() - st.last_changed) / 60000);
+        if (minAgo < 1) onlineText = '<div style="font-size:0.75rem; color:var(--text-secondary); font-weight:normal; line-height:1;">Last seen: Just now</div>';
+        else if (minAgo < 60) onlineText = `<div style="font-size:0.75rem; color:var(--text-secondary); font-weight:normal; line-height:1;">Last seen: ${minAgo}m ago</div>`;
+        else if (minAgo < 1440) onlineText = `<div style="font-size:0.75rem; color:var(--text-secondary); font-weight:normal; line-height:1;">Last seen: ${Math.floor(minAgo/60)}h ago</div>`;
+        else onlineText = `<div style="font-size:0.75rem; color:var(--text-secondary); font-weight:normal; line-height:1;">Last seen: ${Math.floor(minAgo/1440)}d ago</div>`;
     }
     
     document.getElementById('eccUserName').innerHTML = `
         <div style="display:flex; align-items:center; gap: 8px;">
-            <img src="${photoUrl}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);">
-            <div>
-                <div style="font-size: 1.1rem; font-weight: bold;">${otherName}</div>
+            <img src="${photoUrl}" onclick="event.stopPropagation(); window.openImageViewer(this.src)" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.2); cursor: pointer;">
+            <div style="display:flex; flex-direction:column;">
+                <div style="font-size: 1.1rem; font-weight: bold; line-height:1.2;">${otherName}</div>
+                ${onlineText}
             </div>
         </div>
     `;
@@ -4120,7 +4270,7 @@ function renderEccChat(messages) {
         
         let mediaHtml = '';
         if (msg.imageUrl) {
-            mediaHtml = `<img src="${msg.imageUrl}" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-bottom: ${msg.text ? '8px' : '0'}; cursor: pointer; object-fit: contain;" onclick="window.open('${msg.imageUrl}', '_blank')">`;
+            mediaHtml = `<img src="${msg.imageUrl}" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-bottom: ${msg.text ? '8px' : '0'}; cursor: pointer; object-fit: contain;" onclick="window.openImageViewer(this.src)">`;
         }
 
         div.innerHTML = `
@@ -4291,20 +4441,8 @@ function renderJobDashboard() {
         }
         
         div.querySelector('.msg-client-btn').addEventListener('click', () => {
-            jobDashboardModal.style.display = 'none';
-            editorClientChatModal.style.display = 'flex';
-            window.isInterceptingChat = false;
-            
-            currentEccPath = `editor_client_chats/${client.chatKey}/messages`;
-            document.getElementById('eccUserName').textContent = 'Chat with ' + name;
-            
-            if (eccListener) eccListener(); // Unsubscribe prev
-            
-            eccListener = onValue(ref(db, currentEccPath), (snap) => {
-                const snapData = snap.val() || {};
-                const messages = Object.keys(snapData).map(k => ({id: k, ...snapData[k]})).sort((a,b) => a.timestamp - b.timestamp);
-                renderEccChat(messages);
-            });
+            closeModal(jobDashboardModal);
+            window.openClientSideChat(client.clientId, client.chatKey, name, photo);
         });
         
         jobDashboardClientsList.appendChild(div);
@@ -4526,9 +4664,18 @@ function setupAdminInterceptListener() {
 window.openInterceptChat = (chatId, clientName, editorName) => {
     const modal = document.getElementById('editorClientChatModal');
     if(modal) modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
     
     currentEccPath = `editor_client_chats/${chatId}/messages`;
-    document.getElementById('eccUserName').textContent = (clientName && editorName) ? `Chat: ${clientName} ⇄ ${editorName}` : 'Admin Chat View';
+    document.getElementById('eccUserName').innerHTML = `
+        <div style="display:flex; align-items:center; gap: 8px;">
+            <div style="display:flex; flex-direction:column;">
+                <div style="font-size: 1.0rem; font-weight: bold; line-height:1.2;">
+                    ${(clientName && editorName) ? `Chat: ${clientName} ⇄ ${editorName}` : 'Admin Chat View'}
+                </div>
+            </div>
+        </div>
+    `;
     
     // We also set the ID to send from Admin side so it stands out
     window.isInterceptingChat = true;
