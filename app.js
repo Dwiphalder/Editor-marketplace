@@ -264,6 +264,42 @@ window.addEventListener('popstate', (e) => {
                 modal.style.display = 'none';
             }, 300);
         }
+        return;
+    }
+
+    // Modal stack is empty, handle tab navigation
+    if (e.state && e.state.type === 'nav') {
+        const view = e.state.view;
+        window.currentNavView = view;
+        window.switchNavView(view, true); // pass true to skip replacing/pushing state
+    } else if (e.state && e.state.type === 'guard') {
+        // User exited the initial guard state (meaning they hit back on Home tab).
+        // Push the guard and home state back immediately so they don't exit if they cancel.
+        history.pushState({ type: 'nav', view: 'home' }, "");
+        window.currentNavView = 'home';
+        openModal(document.getElementById('exitConfirmModal'));
+    }
+});
+
+const exitConfirmModal = document.getElementById('exitConfirmModal');
+document.getElementById('cancelExitBtn')?.addEventListener('click', () => {
+    if(exitConfirmModal) closeModal(exitConfirmModal);
+});
+document.getElementById('confirmExitBtn')?.addEventListener('click', () => {
+    // If they confirm, we try to close the window (works in some PWA/standalone modes)
+    try { window.close(); } catch(e){}
+    // Otherwise, we navigate back far enough to exit the history stack we created
+    // Stack is currently: [Guard, Home, Modal]
+    // To exit to the previous page (before Guard), we go back 3 times.
+    history.go(-3);
+});
+
+// Setup navigation history on load
+window.addEventListener('load', () => {
+    if (!history.state || history.state.type !== 'nav') {
+        history.replaceState({ type: 'guard' }, "");
+        history.pushState({ type: 'nav', view: 'home' }, "");
+        window.currentNavView = 'home';
     }
 });
 
@@ -923,7 +959,7 @@ window.goToWizardStep = function(targetStep, currentStep = null) {
     });
 };
 
-window.switchNavView = function(view) {
+window.switchNavView = function(view, skipHistory = false) {
     const searchResultsView = document.getElementById('searchResultsView');
     const profileView = document.getElementById('profileView');
     const messagesView = document.getElementById('messagesView');
@@ -931,8 +967,30 @@ window.switchNavView = function(view) {
     
     // Determine scroll direction
     const prevView = window.currentNavView || 'home';
+    if (prevView === view && !skipHistory) return;
+    
     const oldIdx = navOrder.indexOf(prevView);
     const newIdx = navOrder.indexOf(view);
+    
+    // History management
+    if (!skipHistory) {
+        if (view === 'home') {
+            // If they go to home, and they were somewhere else, we pop back to home
+            // Assuming home is always 1 step back from any non-home tab
+            if (history.state && history.state.type === 'nav' && history.state.view !== 'home') {
+                window._isClosingFromCode = true;
+                history.back();
+            }
+        } else {
+            // Target is non-home
+            if (history.state && history.state.type === 'nav' && history.state.view === 'home') {
+                history.pushState({ type: 'nav', view: view }, "");
+            } else {
+                // If they are on another non-home tab, just replace
+                history.replaceState({ type: 'nav', view: view }, "");
+            }
+        }
+    }
     
     let direction = null;
     if (oldIdx !== -1 && newIdx !== -1) {

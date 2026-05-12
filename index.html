@@ -886,6 +886,20 @@
         </div>
     </div>
 
+    <!-- Exit Confirmation Modal -->
+    <div class="modal-overlay" id="exitConfirmModal" style="display: none;">
+        <div class="modal-card" style="max-width: 350px; text-align: center; padding: 20px;">
+            <div style="margin-bottom: 15px;">
+                <h3 style="margin-bottom: 10px; font-size: 1.25rem;">Exit App?</h3>
+                <p class="text-secondary" style="font-size: 0.9rem;">Are you sure you want to exit the application?</p>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="btn secondary" id="cancelExitBtn" style="flex:1;">No, Stay</button>
+                <button class="btn primary" id="confirmExitBtn" style="flex:1;">Yes, Exit</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Filter Modal -->
     <style>
         .custom-radio {
