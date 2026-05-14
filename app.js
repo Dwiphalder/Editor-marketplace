@@ -496,17 +496,31 @@ onAuthStateChanged(auth, async (user) => {
             let profilePic = user.photoURL;
             if(allUsers[user.uid] && allUsers[user.uid].photoUrl) {
                 profilePic = allUsers[user.uid].photoUrl;
+                userAvatar.src = profilePic || window.DEFAULT_AVATAR;
             } else {
                 get(ref(db, "users/" + user.uid)).then(sp => {
                     if(sp.exists()) {
                         allUsers[user.uid] = sp.val();
                         if(sp.val().photoUrl) {
-                            userAvatar.src = sp.val().photoUrl;
+                            userAvatar.src = sp.val().photoUrl || window.DEFAULT_AVATAR;
+                        } else {
+                            userAvatar.src = profilePic || window.DEFAULT_AVATAR;
                         }
+                    } else {
+                        // Create basic user profile on sign up
+                        const newUser = {
+                            email: user.email || '',
+                            photoUrl: user.photoURL || '',
+                            displayName: user.displayName || '',
+                            createdAt: Date.now()
+                        };
+                        set(ref(db, "users/" + user.uid), newUser).then(() => {
+                            allUsers[user.uid] = newUser;
+                            userAvatar.src = newUser.photoUrl || window.DEFAULT_AVATAR;
+                        });
                     }
                 });
             }
-            userAvatar.src = profilePic || window.DEFAULT_AVATAR;
         } else {
             currentUser = null;
             authScreen.style.display = 'flex';
@@ -781,7 +795,18 @@ if(forgotPasswordLink) {
 
 const handleGoogleLogin = async (e) => {
     e.preventDefault();
-    showCustomToast("Google Login is coming soon!", true);
+    try {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
+        showCustomToast("Successfully logged in with Google!");
+        authScreen.style.display = 'none';
+        mainApp.style.display = 'flex';
+        // You might want to save additional user info to the database if it's their first time
+        // but Firebase Auth automatically handles user creation.
+    } catch (error) {
+        console.error("Google login error", error);
+        showCustomToast(error.message || "Failed to log in with Google", true);
+    }
 };
 
 if(document.getElementById('googleAuthBtn')) { document.getElementById('googleAuthBtn').addEventListener('click', handleGoogleLogin); }
@@ -2074,10 +2099,10 @@ function openEditorProfile(id) {
             contactBtn.textContent = 'Request Pending...';
             contactBtn.className = 'btn secondary w-100 btn-large mt-auto';
             contactBtn.disabled = true;
-        } else if (userRequest.status === 'online') {
-            contactBtn.innerHTML = '🟢 Working (Online)';
-            contactBtn.className = 'btn secondary w-100 btn-large mt-auto';
-            contactBtn.disabled = true;
+        } else if (userRequest.status === 'contacted' || userRequest.status === 'online') {
+            contactBtn.innerHTML = 'Chat with Editor';
+            contactBtn.className = 'btn primary w-100 btn-large mt-auto';
+            contactBtn.disabled = false;
         } else if (userRequest.status === 'completed') {
             // Check if user already reviewed
             const hasReviewed = allReviews.find(r => r.editorId === ed.id && r.userId === currentUser.uid);
@@ -2214,6 +2239,10 @@ document.getElementById('contactEditorBtn').addEventListener('click', async () =
             if (allReviews.find(r => r.editorId === ed.id && r.userId === currentUser.uid)) return;
             // Open review modal
             openModal(document.getElementById('reviewModal'));
+        } else if (userRequest.status === 'contacted' || userRequest.status === 'online') {
+            closeModal(profileModal);
+            window.switchNavView('messages');
+            window.openClientSideChat(ed.id, `${ed.id}_${currentUser.uid}`, ed.name || 'Editor', ed.photo_url || window.DEFAULT_AVATAR);
         }
         return;
     }
@@ -2238,6 +2267,16 @@ document.getElementById('contactEditorBtn').addEventListener('click', async () =
             status: "pending",
             timestamp: Date.now()
         });
+        
+        // Seed an initial message so the chat history is created instantly
+        const chatKey = `${ed.id}_${currentUser.uid}`;
+        await push(ref(db, `editor_client_chats/${chatKey}/messages`), {
+            senderId: currentUser.uid,
+            text: "Hi, I've sent you a hire request! Let's discuss my project.",
+            timestamp: Date.now(),
+            read: false
+        });
+        
         // re-fetch or optimistically update
         allRequests.push({
             id: reqRef.key,
