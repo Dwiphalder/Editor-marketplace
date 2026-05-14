@@ -492,6 +492,7 @@ onAuthStateChanged(auth, async (user) => {
             if(supportBtn) supportBtn.style.display = 'block';
             if(typeof listenToUserSupportChats === 'function') listenToUserSupportChats();
             if(typeof listenToClientChats === 'function') listenToClientChats();
+            if(typeof listenToGlobalRequests === 'function') listenToGlobalRequests();
             let profilePic = user.photoURL;
             if(allUsers[user.uid] && allUsers[user.uid].photoUrl) {
                 profilePic = allUsers[user.uid].photoUrl;
@@ -1280,6 +1281,7 @@ function populateJobFormFromProfile() {
                 };
             }
         }
+        if (typeof renderJobDashboard === 'function') renderJobDashboard();
         return;
     } else {
         if(jobsMsg) jobsMsg.innerHTML = `<p class="text-danger">Please <button class="btn btn-sm primary" onclick="window.openUserProfileView()">Complete Profile</button> first. It's required for applying.</p>`;
@@ -1304,6 +1306,8 @@ function populateJobFormFromProfile() {
         avatarPrev.src = defaultPic;
         document.getElementById('jobAvatarUrl').value = defaultPic;
     }
+    
+    if (typeof renderJobDashboard === 'function') renderJobDashboard();
 }
 
 
@@ -1371,6 +1375,9 @@ async function fetchEditors() {
         refreshCurrentFeeds();
         renderWishlist();
         renderAdminList(); // Refresh admin list if it's open
+        if (typeof renderClientChatsList === 'function' && window.globalClientChatsData) renderClientChatsList(window.globalClientChatsData);
+        if (typeof renderJobDashboard === 'function') renderJobDashboard();
+        if (typeof updateChatNotifications === 'function') updateChatNotifications(window.globalClientChatsData || {});
     } catch (error) {
         console.error("Fetch error:", error);
         if(loadingMain) loadingMain.innerHTML = '<p class="text-danger">Failed to load data. Check DB connection.</p>';
@@ -2326,6 +2333,22 @@ function listenToClientChats() {
     });
 }
 
+let globalRequestsListener = null;
+
+function listenToGlobalRequests() {
+    if (globalRequestsListener || !currentUser) return;
+    globalRequestsListener = onValue(ref(db, 'requests'), (snap) => {
+        if (snap.exists()) {
+            const rData = snap.val();
+            allRequests = Object.keys(rData).map(key => ({ id: key, ...rData[key] }));
+        } else {
+            allRequests = [];
+        }
+        if (typeof renderJobDashboard === 'function') renderJobDashboard();
+        if (typeof updateChatNotifications === 'function') updateChatNotifications(window.globalClientChatsData || {});
+    });
+}
+
 function updateChatNotifications(data) {
     if (!currentUser) return;
     let unreadClients = 0;
@@ -2357,6 +2380,12 @@ function updateChatNotifications(data) {
     
     const totalUnread = unreadClients + unreadEditors;
     
+    let pendingRequestsForMe = 0;
+    if (myEditorProfile) {
+        pendingRequestsForMe = allRequests.filter(r => r.editorId === myEditorProfile.id && r.status === 'pending').length;
+    }
+    const jobsBadgeCount = unreadClients + pendingRequestsForMe;
+    
     const updateBadge = (id, count) => {
         const badge = document.getElementById(id);
         if (badge) {
@@ -2371,7 +2400,7 @@ function updateChatNotifications(data) {
     
     updateBadge('bottomNavProfileBadge', 0); // Clear any old profile badge if still around
     updateBadge('bottomNavMessagesBadge', totalUnread);
-    updateBadge('jobDashboardUnreadBadge', unreadClients);
+    updateBadge('bottomNavJobsBadge', jobsBadgeCount);
 }
 
 let lastRenderedChats = [];
@@ -2976,6 +3005,15 @@ if (confirmHireRequest) {
                 userEmail: currentUser.email || 'No email',
                 status: 'pending',
                 timestamp: Date.now()
+            });
+            
+            // Seed an initial message so the chat history is created instantly
+            const chatKey = `${window.currentHireProfileId}_${currentUser.uid}`;
+            await push(ref(db, `editor_client_chats/${chatKey}/messages`), {
+                senderId: currentUser.uid,
+                text: "Hi, I have sent you a project request! Let's discuss.",
+                timestamp: Date.now(),
+                read: false
             });
             
             // Notification to editor
@@ -4440,29 +4478,24 @@ function renderEccChat(messages) {
 }
 
 // Job Dashboard Logic
-const jobDashboardModal = document.getElementById('jobDashboardModal');
-const openJobProfileBtn = document.getElementById('openJobProfileBtn');
-const closeJobDashboard = document.getElementById('closeJobDashboard');
+const inlineJobDashboard = document.getElementById('inlineJobDashboard');
 const jobDashboardClientsList = document.getElementById('jobDashboardClientsList');
 
-if (openJobProfileBtn) {
-    openJobProfileBtn.addEventListener('click', () => {
-        openModal(jobDashboardModal);
-        renderJobDashboard();
-    });
-}
-
-if (closeJobDashboard) {
-    closeJobDashboard.addEventListener('click', () => {
-        closeModal(jobDashboardModal);
-    });
-}
-
 function renderJobDashboard() {
-    if (!currentUser) return;
+    if (!currentUser || !inlineJobDashboard) return;
     const myEditorProfile = editors.find(e => e.userId === currentUser.uid && !e.deletionScheduledAt);
-    if (!myEditorProfile) return;
+    if (!myEditorProfile) {
+        inlineJobDashboard.style.display = 'none';
+        return;
+    }
     
+    // Check if the current user profile is correctly rendered (is it inside jobsStatusContainer?)
+    if (document.getElementById('jobsStatusContainer')?.style.display === 'block') {
+        inlineJobDashboard.style.display = 'block';
+    } else {
+        inlineJobDashboard.style.display = 'none';
+    }
+
     // Find unique clients from requests
     const myRequests = allRequests.filter(r => r.editorId === myEditorProfile.id);
     const uniqueClientIds = new Set(myRequests.map(r => r.userId));
@@ -4491,6 +4524,8 @@ function renderJobDashboard() {
         let lastTimestamp = 0;
         let lastMsgText = '';
         
+        const hasPendingRequest = myRequests.some(r => r.userId === clientId && r.status === 'pending');
+        
         if (msgs.length > 0) {
             const lastMsg = msgs.sort((a,b) => b.timestamp - a.timestamp)[0];
             lastTimestamp = lastMsg.timestamp;
@@ -4498,6 +4533,11 @@ function renderJobDashboard() {
             if (lastMsg.senderId !== currentUser.uid && !lastMsg.read) {
                 unread = true;
             }
+        } else if (hasPendingRequest) {
+            unread = true; // highlight requests
+            lastMsgText = 'New hiring request!';
+            const requestObj = myRequests.find(r => r.userId === clientId && r.status === 'pending');
+            lastTimestamp = requestObj ? requestObj.timestamp : 0;
         }
         
         return { clientId, unread, lastTimestamp, lastMsgText, chatKey };
@@ -4592,11 +4632,15 @@ function renderJobDashboard() {
             });
         }
         
-        div.querySelector('.msg-client-btn').addEventListener('click', () => {
-            closeModal(jobDashboardModal);
-            setTimeout(() => {
-                window.openClientSideChat(client.clientId, client.chatKey, name, photo);
-            }, 100);
+        div.querySelector('.msg-client-btn').addEventListener('click', async () => {
+            const req = myRequests.find(r => r.userId === clientId && r.status === 'pending');
+            if (req) {
+                try {
+                    await update(ref(db, `requests/${req.id}`), { status: 'contacted' });
+                } catch(e) { }
+            }
+            window.switchNavView('messages');
+            window.openClientSideChat(client.clientId, client.chatKey, name, photo);
         });
         
         jobDashboardClientsList.appendChild(div);
